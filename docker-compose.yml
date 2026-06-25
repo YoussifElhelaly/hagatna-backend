@@ -1,0 +1,133 @@
+services:
+  # ─── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: hagatna_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hagatna}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hagatna_password}
+      POSTGRES_DB: ${POSTGRES_DB:-hagatna_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hagatna} -d ${POSTGRES_DB:-hagatna_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hagatna_network
+
+  # ─── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: hagatna_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hagatna_network
+
+  # ─── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: hagatna_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hagatna}:${POSTGRES_PASSWORD:-hagatna_password}@postgres:5432/${POSTGRES_DB:-hagatna_db}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "${PORT:-5000}:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    networks:
+      - hagatna_network
+
+  # ─── DB Migration Runner (runs once then exits) ───────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: hagatna_migrate
+    command: ["npx", "prisma", "migrate", "deploy"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hagatna}:${POSTGRES_PASSWORD:-hagatna_password}@postgres:5432/${POSTGRES_DB:-hagatna_db}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hagatna_network
+    profiles:
+      - migrate
+
+  # ─── Daily DB Backup (cron: runs daily at 2am) ────────────────────────────────
+  db-backup:
+    image: postgres:16-alpine
+    container_name: hagatna_db_backup
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hagatna}:${POSTGRES_PASSWORD:-hagatna_password}@postgres:5432/${POSTGRES_DB:-hagatna_db}
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: 7
+    volumes:
+      - db_backups:/backups
+      - ./scripts/backup-db.sh:/backup.sh:ro
+    entrypoint: >
+      sh -c "
+        echo '0 2 * * * sh /backup.sh >> /backups/backup.log 2>&1' | crontab - &&
+        crond -f
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hagatna_network
+    profiles:
+      - backup
+
+volumes:
+  postgres_data:
+    name: hagatna_postgres_data
+  redis_data:
+    name: hagatna_redis_data
+  backend_logs:
+    name: hagatna_backend_logs
+  db_backups:
+    name: hagatna_db_backups
+
+networks:
+  hagatna_network:
+    name: hagatna_network
+    driver: bridge
