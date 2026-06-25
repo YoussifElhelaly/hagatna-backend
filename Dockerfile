@@ -1,51 +1,40 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM node:18 AS builder
+FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Skip husky during npm ci
-ENV HUSKY=0
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies (layer cache)
 COPY package*.json ./
-RUN npm ci --include=dev --ignore-scripts
+RUN npm ci
 
-# Copy source and prisma schema
 COPY tsconfig.json ./
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma client
 RUN npx prisma generate
 
-# Build TypeScript → JavaScript (tsc + tsc-alias for path aliases)
 RUN npm run build
 
 # ─── Stage 2: Production Image ────────────────────────────────────────────────
-FROM node:18 AS production
+FROM node:18-slim AS production
 
 WORKDIR /app
 
-# Skip husky during npm ci
-ENV HUSKY=0
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copy production dependencies only (skip husky prepare script)
+ENV HUSKY=0
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
-# Copy built output from builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-
-# Copy prisma schema (needed for migrations at runtime)
 COPY --from=builder /app/prisma ./prisma
 
-# Create logs directory with correct permissions
 RUN mkdir -p logs
 
 EXPOSE 5000
-
 ENV NODE_ENV=production
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
