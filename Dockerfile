@@ -1,15 +1,17 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM node:18-alpine AS builder
+FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Install OpenSSL (required by Prisma schema engine)
-RUN apk add --no-cache openssl openssl-dev
+# Install OpenSSL + Prisma dependencies (Debian-based = glibc = Prisma works)
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies (skip husky prepare script)
+# Skip husky during npm ci
 ENV HUSKY=0
+
+# Install dependencies (layer cache)
 COPY package*.json ./
-RUN npm ci --include=dev --ignore-scripts && npm ls
+RUN npm ci --include=dev --ignore-scripts
 
 # Copy source and prisma schema
 COPY tsconfig.json ./
@@ -23,15 +25,15 @@ RUN npx prisma generate
 RUN npm run build
 
 # ─── Stage 2: Production Image ────────────────────────────────────────────────
-FROM node:18-alpine AS production
+FROM node:18-slim AS production
 
 WORKDIR /app
 
-# Install OpenSSL + dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init openssl
+# Install dumb-init + OpenSSL for proper signal handling + Prisma
+RUN apt-get update && apt-get install -y dumb-init openssl && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs -s /bin/false nodejs
 
 # Skip husky during npm ci
 ENV HUSKY=0
