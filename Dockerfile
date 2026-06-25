@@ -4,11 +4,12 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Install OpenSSL (required by Prisma schema engine)
-RUN apk add --no-cache openssl3
+RUN apk add --no-cache openssl openssl-dev
 
-# Install dependencies first (layer cache)
+# Install dependencies (skip husky prepare script)
+ENV HUSKY=0
 COPY package*.json ./
-RUN npm ci --include=dev
+RUN npm ci --include=dev --ignore-scripts && npm ls
 
 # Copy source and prisma schema
 COPY tsconfig.json ./
@@ -26,15 +27,18 @@ FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Add dumb-init for proper signal handling (PID 1 problem)
-RUN apk add --no-cache dumb-init
+# Install OpenSSL + dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init openssl
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
+# Skip husky during npm ci
+ENV HUSKY=0
+
 # Copy production dependencies only (skip husky prepare script)
 COPY package*.json ./
-RUN HUSKY=0 npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # Copy built output from builder stage
 COPY --from=builder /app/dist ./dist
