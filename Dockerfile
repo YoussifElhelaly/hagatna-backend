@@ -3,6 +3,9 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Install OpenSSL (required by Prisma schema engine)
+RUN apk add --no-cache openssl3
+
 # Install dependencies first (layer cache)
 COPY package*.json ./
 RUN npm ci --include=dev
