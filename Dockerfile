@@ -32,9 +32,9 @@ RUN apk add --no-cache dumb-init
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
-# Copy production dependencies only
+# Copy production dependencies only (skip husky prepare script)
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN HUSKY=0 npm ci --omit=dev && npm cache clean --force
 
 # Copy built output from builder stage
 COPY --from=builder /app/dist ./dist
