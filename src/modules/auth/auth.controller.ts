@@ -47,7 +47,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const { tokens, ...clientData } = await AuthService.verifyEmail(req.body);
   setAuthCookies(res, tokens);
-  sendSuccess({ res, message: 'Email verified successfully', data: clientData });
+  sendSuccess({
+    res,
+    message: 'Email verified successfully',
+    data: { ...clientData, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+  });
 });
 
 // ─── POST /auth/resend-otp ────────────────────────────────────────────────────
@@ -64,7 +68,11 @@ export const resendOtp = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { tokens, ...clientData } = await AuthService.login(req.body);
   setAuthCookies(res, tokens);
-  sendSuccess({ res, message: 'Login successful', data: clientData });
+  sendSuccess({
+    res,
+    message: 'Login successful',
+    data: { ...clientData, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+  });
 });
 
 // ─── POST /auth/refresh ───────────────────────────────────────────────────────
