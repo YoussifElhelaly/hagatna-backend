@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as bannerService from './banners.service';
 import { logActivity } from '@modules/activity-logs/activity-logs.service';
+import { logger } from '@shared/utils/logger';
 
 export async function createBanner(req: Request, res: Response): Promise<void> {
   try {
@@ -23,6 +24,7 @@ export async function createBanner(req: Request, res: Response): Promise<void> {
       message: 'Banner created successfully',
     });
   } catch (error) {
+    logger.error('Failed to create banner', { error: (error as Error).message, stack: (error as Error).stack });
     res.status(500).json({
       success: false,
       message: 'Failed to create banner',
@@ -39,6 +41,7 @@ export async function getActiveBanners(_req: Request, res: Response): Promise<vo
       total: banners.length,
     });
   } catch (error) {
+    logger.error('Failed to fetch active banners', { error: (error as Error).message, stack: (error as Error).stack });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch banners',
@@ -55,6 +58,7 @@ export async function getAllBanners(_req: Request, res: Response): Promise<void>
       total: banners.length,
     });
   } catch (error) {
+    logger.error('Failed to fetch all banners', { error: (error as Error).message, stack: (error as Error).stack });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch banners',
@@ -79,6 +83,7 @@ export async function getBannerById(req: Request, res: Response): Promise<void> 
       data: banner,
     });
   } catch (error) {
+    logger.error('Failed to fetch banner', { error: (error as Error).message, stack: (error as Error).stack, id: req.params.id });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch banner',
@@ -114,6 +119,7 @@ export async function updateBanner(req: Request, res: Response): Promise<void> {
       });
       return;
     }
+    logger.error('Failed to update banner', { error: error.message, stack: error.stack, id: req.params.id });
     res.status(500).json({
       success: false,
       message: 'Failed to update banner',
@@ -146,6 +152,7 @@ export async function deleteBanner(req: Request, res: Response): Promise<void> {
       });
       return;
     }
+    logger.error('Failed to delete banner', { error: error.message, stack: error.stack, id: req.params.id });
     res.status(500).json({
       success: false,
       message: 'Failed to delete banner',
@@ -181,6 +188,7 @@ export async function toggleBanner(req: Request, res: Response): Promise<void> {
       });
       return;
     }
+    logger.error('Failed to toggle banner', { error: error.message, stack: error.stack, id: req.params.id });
     res.status(500).json({
       success: false,
       message: 'Failed to toggle banner',
@@ -206,6 +214,7 @@ export async function reorderBanners(req: Request, res: Response): Promise<void>
       message: 'Banners reordered successfully',
     });
   } catch (error) {
+    logger.error('Failed to reorder banners', { error: (error as Error).message, stack: (error as Error).stack });
     res.status(500).json({
       success: false,
       message: 'Failed to reorder banners',

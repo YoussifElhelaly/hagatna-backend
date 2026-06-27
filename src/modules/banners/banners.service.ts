@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@database/prisma/client';
 import { BannerData, UpdateBannerInput } from './banners.types';
-
-const prisma = new PrismaClient();
 
 function derivePublicIdFromUrl(url: string): string {
   try {

@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@database/prisma/client';
 import { LegalPageData, UpdateLegalPageInput } from './legal.types';
-
-const prisma = new PrismaClient();
 
 export async function createLegalPage(data: LegalPageData) {
   const existing = await prisma.legalPage.findUnique({
