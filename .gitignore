@@ -134,3 +134,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Uploads (user-uploaded files)
+uploads/*
+!uploads/**/.gitkeep

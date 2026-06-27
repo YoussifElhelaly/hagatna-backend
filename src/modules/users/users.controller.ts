@@ -62,7 +62,7 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
 export const updateUserStatus = asyncHandler(async (req: Request, res: Response) => {
   const user = await UsersService.updateUserStatus(req.params.id, req.body.isActive);
   const action = req.body.isActive ? 'activate_user' : 'suspend_user';
-  logActivity({ adminId: req.user!.id, action, entityType: 'user', entityId: req.params.id, entityLabel: user.name, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'system', action, entityType: 'user', entityId: req.params.id, entityLabel: user.name, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: `User ${req.body.isActive ? 'activated' : 'suspended'} successfully`, data: user });
 });
 
@@ -70,6 +70,6 @@ export const updateUserStatus = asyncHandler(async (req: Request, res: Response)
 export const bulkUpdateStatus = asyncHandler(async (req: Request, res: Response) => {
   const result = await UsersService.bulkUpdateStatus(req.body.ids, req.body.isActive);
   const action = req.body.isActive ? 'bulk_activate_users' : 'bulk_suspend_users';
-  logActivity({ adminId: req.user!.id, action, entityType: 'user', metadata: { count: result.updated, userIds: req.body.ids }, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'system', action, entityType: 'user', metadata: { count: result.updated, userIds: req.body.ids }, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: `${result.updated} user(s) ${req.body.isActive ? 'activated' : 'suspended'} successfully`, data: result });
 });

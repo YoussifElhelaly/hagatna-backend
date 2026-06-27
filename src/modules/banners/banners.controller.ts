@@ -1,9 +1,22 @@
 import { Request, Response } from 'express';
 import * as bannerService from './banners.service';
+import { logActivity } from '@modules/activity-logs/activity-logs.service';
 
 export async function createBanner(req: Request, res: Response): Promise<void> {
   try {
     const banner = await bannerService.createBanner(req.body);
+    logActivity({
+      userId: req.user?.id,
+      role: 'admin',
+      category: 'settings',
+      action: 'create_banner',
+      entityType: 'banner',
+      entityId: banner.id,
+      entityLabel: typeof banner.title === 'object' ? (banner.title as any)?.en || JSON.stringify(banner.title) : String(banner.title || ''),
+      metadata: { title: req.body.title },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     res.status(201).json({
       success: true,
       data: banner,
@@ -76,6 +89,18 @@ export async function getBannerById(req: Request, res: Response): Promise<void> 
 export async function updateBanner(req: Request, res: Response): Promise<void> {
   try {
     const banner = await bannerService.updateBanner(req.params.id, req.body);
+    logActivity({
+      userId: req.user?.id,
+      role: 'admin',
+      category: 'settings',
+      action: 'update_banner',
+      entityType: 'banner',
+      entityId: req.params.id,
+      entityLabel: typeof banner.title === 'object' ? (banner.title as any)?.en || JSON.stringify(banner.title) : String(banner.title || ''),
+      metadata: req.body,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     res.status(200).json({
       success: true,
       data: banner,
@@ -99,6 +124,16 @@ export async function updateBanner(req: Request, res: Response): Promise<void> {
 export async function deleteBanner(req: Request, res: Response): Promise<void> {
   try {
     await bannerService.deleteBanner(req.params.id);
+    logActivity({
+      userId: req.user?.id,
+      role: 'admin',
+      category: 'settings',
+      action: 'delete_banner',
+      entityType: 'banner',
+      entityId: req.params.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     res.status(200).json({
       success: true,
       message: 'Banner deleted successfully',
@@ -121,6 +156,18 @@ export async function deleteBanner(req: Request, res: Response): Promise<void> {
 export async function toggleBanner(req: Request, res: Response): Promise<void> {
   try {
     const banner = await bannerService.toggleBannerActive(req.params.id);
+    logActivity({
+      userId: req.user?.id,
+      role: 'admin',
+      category: 'settings',
+      action: 'toggle_banner',
+      entityType: 'banner',
+      entityId: req.params.id,
+      entityLabel: typeof banner.title === 'object' ? (banner.title as any)?.en || JSON.stringify(banner.title) : String(banner.title || ''),
+      metadata: { isActive: banner.isActive },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     res.status(200).json({
       success: true,
       data: banner,
@@ -144,6 +191,16 @@ export async function toggleBanner(req: Request, res: Response): Promise<void> {
 export async function reorderBanners(req: Request, res: Response): Promise<void> {
   try {
     await bannerService.reorderBanners(req.body.bannerIds);
+    logActivity({
+      userId: req.user?.id,
+      role: 'admin',
+      category: 'settings',
+      action: 'reorder_banners',
+      entityType: 'banner',
+      metadata: { bannerIds: req.body.bannerIds },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     res.status(200).json({
       success: true,
       message: 'Banners reordered successfully',

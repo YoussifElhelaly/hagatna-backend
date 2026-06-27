@@ -5,6 +5,7 @@ import { sendSuccess } from '@shared/utils/ApiResponse';
 import { ApiError } from '@shared/utils/ApiError';
 import { env } from '@config/env';
 import * as AuthService from './auth.service';
+import { logActivity } from '@modules/activity-logs/activity-logs.service';
 import type { AuthTokens } from './auth.types';
 
 const isProduction = env.NODE_ENV === 'production';
@@ -35,6 +36,14 @@ const clearAuthCookies = (res: Response): void => {
 // ─── POST /auth/register ──────────────────────────────────────────────────────
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await AuthService.register(req.body);
+  logActivity({
+    action: 'register',
+    category: 'auth',
+    entityType: 'user',
+    metadata: { email: req.body.email, name: req.body.name, role: req.body.role || 'customer' },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({
     res,
     statusCode: 201,
@@ -47,6 +56,17 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const { tokens, ...clientData } = await AuthService.verifyEmail(req.body);
   setAuthCookies(res, tokens);
+  logActivity({
+    userId: clientData.user.id,
+    role: clientData.user.role.toLowerCase() as 'admin' | 'vendor' | 'customer',
+    action: 'verify_email',
+    category: 'auth',
+    entityType: 'user',
+    entityId: clientData.user.id,
+    entityLabel: clientData.user.name,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({
     res,
     message: 'Email verified successfully',
@@ -68,6 +88,18 @@ export const resendOtp = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { tokens, ...clientData } = await AuthService.login(req.body);
   setAuthCookies(res, tokens);
+  logActivity({
+    userId: clientData.user.id,
+    role: clientData.user.role.toLowerCase() as 'admin' | 'vendor' | 'customer',
+    action: 'login',
+    category: 'auth',
+    entityType: 'user',
+    entityId: clientData.user.id,
+    entityLabel: clientData.user.name,
+    metadata: { provider: 'local' },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({
     res,
     message: 'Login successful',
@@ -93,6 +125,16 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
 
 // ─── POST /auth/logout ────────────────────────────────────────────────────────
 export const logout = asyncHandler(async (req: Request, res: Response) => {
+  logActivity({
+    userId: req.user!.id,
+    role: req.user!.role.toLowerCase() as 'admin' | 'vendor' | 'customer',
+    action: 'logout',
+    category: 'auth',
+    entityType: 'user',
+    entityId: req.user!.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   await AuthService.logout(req.user!.id);
   clearAuthCookies(res);
   sendSuccess({ res, message: 'Logged out successfully' });
@@ -101,6 +143,13 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
 // ─── POST /auth/forgot-password ───────────────────────────────────────────────
 export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   await AuthService.forgotPassword(req.body.email);
+  logActivity({
+    action: 'forgot_password',
+    category: 'auth',
+    metadata: { email: req.body.email },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   // Always same response — never reveal if email exists
   sendSuccess({ res, message: 'If that email is registered, a reset link has been sent.' });
 });
@@ -108,6 +157,13 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
 // ─── POST /auth/reset-password ────────────────────────────────────────────────
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   await AuthService.resetPassword(req.body.token, req.body.password);
+  logActivity({
+    action: 'reset_password',
+    category: 'auth',
+    metadata: { tokenProvided: true },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({ res, message: 'Password reset successful. Please login with your new password.' });
 });
 
@@ -118,6 +174,18 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response) =
 
   const tokens = await AuthService.handleOAuthSuccess(user);
   setAuthCookies(res, tokens);
+  logActivity({
+    userId: user.id,
+    role: user.role.toLowerCase() as 'admin' | 'vendor' | 'customer',
+    action: 'oauth_login',
+    category: 'auth',
+    entityType: 'user',
+    entityId: user.id,
+    entityLabel: user.name,
+    metadata: { provider: 'google' },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   // Redirect without tokens in URL — cookies carry the session
   const frontendOrigin = env.FRONTEND_URL.split(',')[0].trim();
   res.redirect(`${frontendOrigin}/auth/callback`);
@@ -130,6 +198,18 @@ export const facebookCallback = asyncHandler(async (req: Request, res: Response)
 
   const tokens = await AuthService.handleOAuthSuccess(user);
   setAuthCookies(res, tokens);
+  logActivity({
+    userId: user.id,
+    role: user.role.toLowerCase() as 'admin' | 'vendor' | 'customer',
+    action: 'oauth_login',
+    category: 'auth',
+    entityType: 'user',
+    entityId: user.id,
+    entityLabel: user.name,
+    metadata: { provider: 'facebook' },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   const frontendOrigin = env.FRONTEND_URL.split(',')[0].trim();
   res.redirect(`${frontendOrigin}/auth/callback`);
 });

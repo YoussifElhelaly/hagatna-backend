@@ -19,6 +19,16 @@ export const getMyProfile = asyncHandler(async (req: Request, res: Response) => 
 // ─── PATCH /vendors/me ────────────────────────────────────────────────────────
 export const updateMyProfile = asyncHandler(async (req: Request, res: Response) => {
   const vendor = await VendorsService.updateMyProfile(req.user!.id, req.body);
+  logActivity({
+    userId: req.user!.id,
+    role: 'vendor',
+    category: 'vendor',
+    action: 'update_store_profile',
+    entityType: 'vendor',
+    entityId: req.user!.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({ res, message: 'Store profile updated', data: vendor });
 });
 
@@ -49,28 +59,28 @@ export const getVendorById = asyncHandler(async (req: Request, res: Response) =>
 // ─── PATCH /vendors/:id/approve  (admin) ──────────────────────────────────────
 export const approveVendor = asyncHandler(async (req: Request, res: Response) => {
   const vendor = await VendorsService.approveVendor(req.params.id);
-  logActivity({ adminId: req.user!.id, action: 'approve_vendor', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'vendor', action: 'approve_vendor', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Vendor approved successfully', data: vendor });
 });
 
 // ─── PATCH /vendors/:id/reject  (admin) ───────────────────────────────────────
 export const rejectVendor = asyncHandler(async (req: Request, res: Response) => {
   const vendor = await VendorsService.rejectVendor(req.params.id, req.body.rejectionReason);
-  logActivity({ adminId: req.user!.id, action: 'reject_vendor', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), metadata: { reason: req.body.rejectionReason }, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'vendor', action: 'reject_vendor', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), metadata: { reason: req.body.rejectionReason }, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Vendor application rejected', data: vendor });
 });
 
 // ─── PATCH /vendors/:id/suspend  (admin) ──────────────────────────────────────
 export const suspendVendor = asyncHandler(async (req: Request, res: Response) => {
   const vendor = await VendorsService.suspendVendor(req.params.id);
-  logActivity({ adminId: req.user!.id, action: 'suspend_vendor', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'vendor', action: 'suspend_vendor', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Vendor suspended', data: vendor });
 });
 
 // ─── PATCH /vendors/:id/commission  (admin) ───────────────────────────────────
 export const updateCommission = asyncHandler(async (req: Request, res: Response) => {
   const vendor = await VendorsService.updateCommission(req.params.id, req.body.commissionRate);
-  logActivity({ adminId: req.user!.id, action: 'update_commission', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), metadata: { commissionRate: req.body.commissionRate }, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'vendor', action: 'update_commission', entityType: 'vendor', entityId: req.params.id, entityLabel: (vendor as any).storeName?.en || String((vendor as any).storeName), metadata: { commissionRate: req.body.commissionRate }, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Commission rate updated', data: vendor });
 });
 

@@ -164,7 +164,7 @@ model User {
   orderStatusHistory OrderStatusHistory[] @relation("ChangedBy")
   loyaltyAccount     LoyaltyAccount?
   mediaAssets        MediaAsset[]
-  activityLogs       AdminActivityLog[]
+  activityLogs       ActivityLog[]
 
   @@map("users")
 }
@@ -621,7 +621,7 @@ model VendorCommission {
   netAmount       Decimal       @db.Decimal(12, 2)
   status                 PaymentStatus @default(pending)
   paidAt                 DateTime?
-  paymentProof           String?       @db.Text   // Cloudinary URL of payment receipt
+  paymentProof           String?       @db.Text   // Image URL of payment receipt
   paymentProofPublicId   String?       @db.VarChar(255)
   createdAt              DateTime      @default(now())
 
@@ -960,25 +960,51 @@ model MediaAsset {
 // ═══════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════
-//  ADMIN ACTIVITY LOGS
+//  ACTIVITY LOGS (unified: admin + vendor + customer)
 // ═══════════════════════════════════════════════════════
 
-model AdminActivityLog {
-  id          String   @id @default(uuid())
-  adminId     String
-  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  action      String   @db.VarChar(100)   // e.g. "suspend_user", "approve_vendor"
-  entityType  String?  @db.VarChar(50)    // e.g. "user", "vendor", "product"
-  entityId    String?  @db.VarChar(100)
-  entityLabel String?  @db.VarChar(255)   // human-readable name
-  metadata    Json?                        // extra context { before, after, reason }
-  ipAddress   String?  @db.VarChar(50)
-  createdAt   DateTime @default(now())
+enum ActivityRole {
+  admin
+  vendor
+  customer
+  system
+}
 
-  @@index([adminId])
+enum ActivityCategory {
+  auth
+  order
+  product
+  cart
+  review
+  vendor
+  wishlist
+  settings
+  loyalty
+  system
+}
+
+model ActivityLog {
+  id          String           @id @default(uuid())
+  userId      String?          @db.VarChar(100)
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role        ActivityRole     @default(system)
+  category    ActivityCategory @default(system)
+  action      String           @db.VarChar(100)   // e.g. "login", "create_order", "approve_vendor"
+  entityType  String?          @db.VarChar(50)    // e.g. "user", "vendor", "product"
+  entityId    String?          @db.VarChar(100)
+  entityLabel String?          @db.VarChar(255)   // human-readable name
+  metadata    Json?                                  // extra context { before, after, reason }
+  ipAddress   String?          @db.VarChar(50)
+  userAgent   String?          @db.VarChar(500)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([role])
+  @@index([category])
+  @@index([action])
   @@index([createdAt])
   @@index([entityType, entityId])
-  @@map("admin_activity_logs")
+  @@map("activity_logs")
 }
 
 // ═══════════════════════════════════════════════════════

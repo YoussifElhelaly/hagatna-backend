@@ -9,7 +9,7 @@ export const CreateBannerSchema = z.object({
   title: LocalizedStringSchema,
   description: LocalizedStringSchema,
   imageUrl: z.string().url('Invalid image URL'),
-  imagePublicId: z.string().min(1, 'Image public ID is required'),
+  imagePublicId: z.string().optional().default(''),
   linkUrl: z.string().url('Invalid link URL').optional().nullable(),
   order: z.number().int().min(0).optional().default(0),
   isActive: z.boolean().optional().default(true),

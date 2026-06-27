@@ -13,7 +13,7 @@ export const getSettings = asyncHandler(async (_req: Request, res: Response) => 
 // ─── PATCH /loyalty/settings  (admin) ────────────────────────────────────────
 export const updateSettings = asyncHandler(async (req: Request, res: Response) => {
   const data = await LoyaltyService.updateSettings(req.body);
-  logActivity({ adminId: req.user!.id, action: 'update_loyalty_settings', entityType: 'settings', entityId: 'loyalty', metadata: req.body, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'loyalty', action: 'update_loyalty_settings', entityType: 'settings', entityId: 'loyalty', metadata: req.body, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Loyalty settings updated', data });
 });
 
@@ -47,14 +47,14 @@ export const getAccountByUserId = asyncHandler(async (req: Request, res: Respons
 export const adminAdjust = asyncHandler(async (req: Request, res: Response) => {
   const { points, description } = req.body;
   const data = await LoyaltyService.adminAdjust(req.params.userId, points, description);
-  logActivity({ adminId: req.user!.id, action: points > 0 ? 'add_loyalty_points' : 'deduct_loyalty_points', entityType: 'user', entityId: req.params.userId, metadata: { points, description }, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'loyalty', action: points > 0 ? 'add_loyalty_points' : 'deduct_loyalty_points', entityType: 'user', entityId: req.params.userId, metadata: { points, description }, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Points adjusted', data });
 });
 
 // ─── POST /loyalty/expire-points  (admin) ────────────────────────────────────
 export const triggerExpirePoints = asyncHandler(async (req: Request, res: Response) => {
   const result = await LoyaltyService.expirePoints();
-  logActivity({ adminId: req.user!.id, action: 'expire_loyalty_points', entityType: 'settings', entityId: 'loyalty', metadata: result, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'loyalty', action: 'expire_loyalty_points', entityType: 'settings', entityId: 'loyalty', metadata: result, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Points expiry completed', data: result });
 });
 

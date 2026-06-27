@@ -3,13 +3,29 @@ import { BannerData, UpdateBannerInput } from './banners.types';
 
 const prisma = new PrismaClient();
 
+function derivePublicIdFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/');
+    const uploadIdx = parts.indexOf('upload');
+    if (uploadIdx !== -1 && uploadIdx + 2 < parts.length) {
+      return parts.slice(uploadIdx + 2).join('/');
+    }
+    return parts.slice(1).join('/');
+  } catch {
+    return url;
+  }
+}
+
 export async function createBanner(data: BannerData) {
+  const imagePublicId = data.imagePublicId || derivePublicIdFromUrl(data.imageUrl);
+
   return prisma.banner.create({
     data: {
       title: data.title as unknown as Prisma.InputJsonValue,
       description: data.description as unknown as Prisma.InputJsonValue,
       imageUrl: data.imageUrl,
-      imagePublicId: data.imagePublicId,
+      imagePublicId,
       linkUrl: data.linkUrl,
       order: data.order ?? 0,
       isActive: data.isActive ?? true,
@@ -60,13 +76,19 @@ export async function updateBanner(id: string, data: UpdateBannerInput) {
     throw new Error('Banner not found');
   }
 
+  const imagePublicId = data.imagePublicId
+    ? data.imagePublicId
+    : data.imageUrl
+      ? derivePublicIdFromUrl(data.imageUrl)
+      : undefined;
+
   return prisma.banner.update({
     where: { id },
     data: {
       ...(data.title && { title: data.title as unknown as Prisma.InputJsonValue }),
       ...(data.description && { description: data.description as unknown as Prisma.InputJsonValue }),
       ...(data.imageUrl && { imageUrl: data.imageUrl }),
-      ...(data.imagePublicId && { imagePublicId: data.imagePublicId }),
+      ...(imagePublicId && { imagePublicId }),
       ...(data.linkUrl !== undefined && { linkUrl: data.linkUrl }),
       ...(data.order !== undefined && { order: data.order }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),

@@ -30,6 +30,8 @@ export const errorHandler = (
 
   // ─── Prisma Known Errors ───────────────────────────────────────────────────
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    logger.error(`Prisma error code: ${err.code}`, { meta: err.meta });
+
     if (err.code === 'P2002') {
       const field = (err.meta?.target as string[])?.join(', ') ?? 'field';
       res.status(409).json({
@@ -45,6 +47,38 @@ export const errorHandler = (
       });
       return;
     }
+    if (err.code === 'P2003') {
+      const field = (err.meta?.field_name as string) ?? 'foreign key';
+      res.status(400).json({
+        success: false,
+        message: `Related record not found (${field})`,
+      });
+      return;
+    }
+    if (err.code === 'P2014') {
+      res.status(400).json({
+        success: false,
+        message: 'Required relation violation',
+      });
+      return;
+    }
+    // Catch-all for other Prisma known errors
+    res.status(400).json({
+      success: false,
+      message: `Database error: ${err.code}`,
+    });
+    return;
+  }
+
+  // ─── Prisma Unknown/Rust Errors ────────────────────────────────────────────
+  if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+    logger.error('PrismaClientUnknownRequestError', { stack: err.stack });
+  }
+  if (err instanceof Prisma.PrismaClientRustPanicError) {
+    logger.error('PrismaClientRustPanicError — possible DB corruption or connection issue', { stack: err.stack });
+  }
+  if (err instanceof Prisma.PrismaClientInitializationError) {
+    logger.error('PrismaClientInitializationError — failed to connect to database', { stack: err.stack });
   }
 
   // ─── Operational API Errors ────────────────────────────────────────────────

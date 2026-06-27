@@ -4,6 +4,7 @@ import { sendSuccess } from '@shared/utils/ApiResponse';
 import { ApiError } from '@shared/utils/ApiError';
 import type { JwtPayload } from '@shared/types';
 import * as wishlistService from './wishlist.service';
+import { logActivity } from '@modules/activity-logs/activity-logs.service';
 
 // ─── GET /wishlist ────────────────────────────────────────────────────────────
 // Returns the authenticated user's paginated wishlist.
@@ -27,6 +28,17 @@ export const toggleWishlist = asyncHandler(async (req: Request, res: Response) =
 
   const result = await wishlistService.toggleWishlist(userId, productId);
   const message = result.added ? 'Added to wishlist' : 'Removed from wishlist';
+
+  logActivity({
+    userId,
+    role: 'customer',
+    category: 'wishlist',
+    action: result.added ? 'add_to_wishlist' : 'remove_from_wishlist',
+    entityType: 'product',
+    entityId: productId,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
 
   return sendSuccess({ res, message, data: result });
 });

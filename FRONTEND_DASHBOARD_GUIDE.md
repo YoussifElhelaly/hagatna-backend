@@ -1068,8 +1068,8 @@ GET /api/v1/media?page=1&limit=20&folder=products
   "data": [
     {
       "id": "...",
-      "url": "https://res.cloudinary.com/...",
-      "publicId": "hagatna/products/abc123",
+      "url": "/uploads/products/abc123.webp",
+      "publicId": "products/abc123.webp",
       "filename": "iphone-case.jpg",
       "folder": "products",
       "resourceType": "image",

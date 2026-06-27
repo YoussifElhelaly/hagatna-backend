@@ -270,7 +270,7 @@
 ### ✅ TC-PAY-04 — الأدمن يوافق على payout مع صورة إيصال
 **الخطوات:**
 1. `PATCH /admin/payouts/:id/approve` (multipart/form-data + field "image")
-**النتيجة المتوقعة:** 200 + `paymentProof` = Cloudinary URL
+**النتيجة المتوقعة:** 200 + `paymentProof` = Server URL
 
 ### ✅ TC-PAY-05 — الأدمن يوافق على payout تم صرفه مسبقاً
 **النتيجة المتوقعة:** 409 — This payout has already been approved

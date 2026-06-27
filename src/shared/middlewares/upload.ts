@@ -11,7 +11,7 @@ const ALL_MIME_TYPES = [...IMAGE_MIME_TYPES, ...DOCUMENT_MIME_TYPES];
 const MAX_IMAGE_SIZE  = 5  * 1024 * 1024; //  5 MB
 const MAX_DOC_SIZE    = 10 * 1024 * 1024; // 10 MB
 
-// ─── Memory storage (buffer → Cloudinary stream) ─────────────────────────────
+// ─── Memory storage (buffer → sharp processing → disk) ────────────────────────
 const memoryStorage = multer.memoryStorage();
 
 // ─── Filter factory ───────────────────────────────────────────────────────────

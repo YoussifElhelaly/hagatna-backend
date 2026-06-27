@@ -126,9 +126,9 @@ export const deleteAsset = async (
     }
   }
 
-  // Delete from Cloudinary
+  // Delete from server storage
   await deleteFile(asset.publicId, asset.resourceType === 'raw' ? 'raw' : 'image')
-    .catch(() => {/* already deleted on Cloudinary — still remove from DB */});
+    .catch(() => {/* already deleted on server — still remove from DB */});
 
   await prisma.mediaAsset.delete({ where: { id: assetId } });
 };

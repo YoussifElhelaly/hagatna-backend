@@ -1,5 +1,7 @@
-import { UploadApiResponse } from 'cloudinary';
-import cloudinary from '@config/cloudinary';
+import fs from 'fs/promises';
+import path from 'path';
+import { randomUUID } from 'crypto';
+import sharp from 'sharp';
 import { ApiError } from '@shared/utils/ApiError';
 
 // ─── Folder map ───────────────────────────────────────────────────────────────
@@ -13,42 +15,68 @@ export type UploadFolder =
   | 'documents'
   | 'payouts';
 
-// ─── Helper: buffer → Cloudinary upload stream ────────────────────────────────
-const streamUpload = (
-  buffer: Buffer,
-  folder: string,
-  resourceType: 'image' | 'raw' = 'image',
-): Promise<UploadApiResponse> =>
-  new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: `hagatna/${folder}`,
-        resource_type: resourceType,
-        // Auto-quality + format for images
-        ...(resourceType === 'image' && {
-          quality: 'auto',
-          fetch_format: 'auto',
-        }),
-      },
-      (error, result) => {
-        if (error || !result) {
-          reject(new ApiError(500, error?.message ?? 'Cloudinary upload failed'));
-        } else {
-          resolve(result);
-        }
-      },
-    );
-    stream.end(buffer);
-  });
+// ─── Config ───────────────────────────────────────────────────────────────────
+const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
+const MAX_IMAGE_WIDTH = 2000;
+const WEBP_QUALITY = 80;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getExt(mimetype: string, originalname: string): string {
+  if (mimetype === 'application/pdf') return '.pdf';
+  if (mimetype === 'image/webp') return '.webp';
+  if (mimetype === 'image/png') return '.png';
+  if (mimetype === 'image/gif') return '.gif';
+  // Default: use original extension or .jpg
+  const orig = path.extname(originalname).toLowerCase();
+  return orig || '.jpg';
+}
+
+async function ensureDir(dirPath: string): Promise<void> {
+  await fs.mkdir(dirPath, { recursive: true });
+}
+
+function buildUrl(folder: string, filename: string): string {
+  return `/uploads/${folder}/${filename}`;
+}
 
 // ─── uploadSingle ─────────────────────────────────────────────────────────────
 export const uploadSingle = async (
   file: Express.Multer.File,
   folder: UploadFolder,
 ): Promise<{ url: string; publicId: string }> => {
-  const resourceType = file.mimetype === 'application/pdf' ? 'raw' : 'image';
-  const result = await streamUpload(file.buffer, folder, resourceType);
-  return { url: result.secure_url, publicId: result.public_id };
+  const isImage = file.mimetype.startsWith('image/');
+  const isPdf = file.mimetype === 'application/pdf';
+
+  if (!isImage && !isPdf) {
+    throw new ApiError(400, `Unsupported file type: ${file.mimetype}`);
+  }
+
+  const dir = path.join(UPLOAD_DIR, folder);
+  await ensureDir(dir);
+
+  const id = randomUUID();
+  let filename: string;
+  let buffer: Buffer;
+
+  if (isPdf) {
+    filename = `${id}.pdf`;
+    buffer = file.buffer;
+  } else {
+    // Optimize image with sharp
+    filename = `${id}.webp`;
+    buffer = await sharp(file.buffer)
+      .resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+  }
+
+  const filePath = path.join(dir, filename);
+  await fs.writeFile(filePath, buffer);
+
+  const url = buildUrl(folder, filename);
+  const publicId = `${folder}/${filename}`;
+
+  return { url, publicId };
 };
 
 // ─── uploadMultiple ───────────────────────────────────────────────────────────
@@ -61,16 +89,19 @@ export const uploadMultiple = async (
 // ─── deleteFile ───────────────────────────────────────────────────────────────
 export const deleteFile = async (
   publicId: string,
-  resourceType: 'image' | 'raw' = 'image',
+  _resourceType: 'image' | 'raw' = 'image',
 ): Promise<void> => {
-  const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-  if (result.result !== 'ok' && result.result !== 'not found') {
-    throw new ApiError(500, `Failed to delete file: ${result.result}`);
+  const filePath = path.join(UPLOAD_DIR, publicId);
+  try {
+    await fs.unlink(filePath);
+  } catch (err: any) {
+    if (err.code === 'ENOENT') return; // already deleted — ok
+    throw new ApiError(500, `Failed to delete file: ${err.message}`);
   }
 };
 
 // ─── deleteMultiple ───────────────────────────────────────────────────────────
 export const deleteMultiple = async (publicIds: string[]): Promise<void> => {
   if (!publicIds.length) return;
-  await cloudinary.api.delete_resources(publicIds, { resource_type: 'image' });
+  await Promise.all(publicIds.map((id) => deleteFile(id)));
 };

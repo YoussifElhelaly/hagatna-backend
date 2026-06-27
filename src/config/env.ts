@@ -46,10 +46,9 @@ export const env = cleanEnv(process.env, {
   SMTP_PASS: str(),
   EMAIL_FROM: str({ default: 'Hagatna <noreply@hagatnaa.com>' }),
 
-  // Cloudinary
-  CLOUDINARY_CLOUD_NAME: str(),
-  CLOUDINARY_API_KEY: str(),
-  CLOUDINARY_API_SECRET: str(),
+  // Uploads
+  UPLOAD_DIR: str({ default: 'uploads' }),
+  BACKEND_URL: str({ default: 'http://localhost:5000' }),
 
   // Paymob — optional, feature is disabled when any value is missing
   PAYMOB_API_KEY:               str({ default: '' }),

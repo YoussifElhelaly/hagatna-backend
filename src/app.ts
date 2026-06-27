@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/node';
 import express, { Application } from 'express';
+import path from 'path';
 import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
@@ -68,7 +69,7 @@ app.use(
         defaultSrc:     ["'self'"],
         scriptSrc:      ["'self'"],
         styleSrc:       ["'self'", "'unsafe-inline'"],
-        imgSrc:         ["'self'", 'data:', 'https://res.cloudinary.com'],
+        imgSrc:         ["'self'", 'data:'],
         connectSrc:     ["'self'"],
         fontSrc:        ["'self'"],
         objectSrc:      ["'none'"],
@@ -76,7 +77,7 @@ app.use(
         upgradeInsecureRequests: env.NODE_ENV === 'production' ? [] : null,
       },
     },
-    crossOriginEmbedderPolicy: false, // needed for Cloudinary images
+    crossOriginEmbedderPolicy: false,
   })
 );
 app.use(cors(corsOptions));
@@ -108,6 +109,9 @@ app.use(passport.initialize());
 
 // ─── i18n / Locale ────────────────────────────────────────────────────────────
 app.use(localeMiddleware);
+
+// ─── Static Files (uploads) ──────────────────────────────────────────────────
+app.use('/uploads', express.static(path.join(process.cwd(), env.UPLOAD_DIR)));
 
 // ─── CSRF Protection ──────────────────────────────────────────────────────────
 app.use(csrfMiddleware);
@@ -150,7 +154,7 @@ app.use(`${API_PREFIX}/vendor-plans`, vendorPlanRoutes);
 app.use(`${API_PREFIX}/loyalty`, loyaltyRoutes);
 app.use(`${API_PREFIX}/media`, mediaRoutes);
 app.use(`${API_PREFIX}/admin/settings`, settingsRoutes);
-app.use(`${API_PREFIX}/admin/activity-logs`, activityLogsRoutes);
+app.use(API_PREFIX, activityLogsRoutes);
 app.use(`${API_PREFIX}/contact`, contactRoutes);
 app.use(`${API_PREFIX}/legal`, legalRoutes);
 app.use(`${API_PREFIX}/banners`, bannerRoutes);

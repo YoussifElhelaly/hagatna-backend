@@ -13,6 +13,6 @@ export const getSettings = asyncHandler(async (_req: Request, res: Response) => 
 // ─── PATCH /admin/settings  (admin) ───────────────────────────────────────────
 export const updateSettings = asyncHandler(async (req: Request, res: Response) => {
   const settings = await SettingsService.updateSettings(req.body);
-  logActivity({ adminId: req.user!.id, action: 'update_platform_settings', entityType: 'settings', entityId: 'platform', metadata: req.body, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'settings', action: 'update_platform_settings', entityType: 'settings', entityId: 'platform', metadata: req.body, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Platform settings updated', data: settings });
 });

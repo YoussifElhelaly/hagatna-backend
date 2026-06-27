@@ -38,6 +38,17 @@ export const getProductBySlug = asyncHandler(async (req: Request, res: Response)
 // ─── POST /products  (vendor) ─────────────────────────────────────────────────
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await ProductsService.createProduct(req.user!.id, req.body);
+  logActivity({
+    userId: req.user!.id,
+    role: 'vendor',
+    category: 'product',
+    action: 'create_product',
+    entityType: 'product',
+    entityId: (product as any).id,
+    entityLabel: (product.name as any)?.en || String(product.name),
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendCreated(res, 'Product created successfully', product);
 });
 
@@ -48,6 +59,17 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
     req.params.id,
     req.body
   );
+  logActivity({
+    userId: req.user!.id,
+    role: 'vendor',
+    category: 'product',
+    action: 'update_product',
+    entityType: 'product',
+    entityId: req.params.id,
+    entityLabel: (product.name as any)?.en || String(product.name),
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({ res, message: 'Product updated successfully', data: product });
 });
 
@@ -65,6 +87,16 @@ export const updateProductStatus = asyncHandler(async (req: Request, res: Respon
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
   const isAdmin = req.user!.role === ROLES.ADMIN;
   await ProductsService.deleteProduct(req.user!.id, req.params.id, isAdmin);
+  logActivity({
+    userId: req.user!.id,
+    role: isAdmin ? 'admin' : 'vendor',
+    category: 'product',
+    action: 'delete_product',
+    entityType: 'product',
+    entityId: req.params.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
   sendSuccess({ res, message: 'Product deleted successfully', data: null });
 });
 
@@ -83,14 +115,14 @@ export const listPendingApproval = asyncHandler(async (req: Request, res: Respon
 // ─── PATCH /products/:id/approve  (admin) ────────────────────────────────────
 export const approveProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await ProductsService.approveProduct(req.params.id);
-  logActivity({ adminId: req.user!.id, action: 'approve_product', entityType: 'product', entityId: req.params.id, entityLabel: (product.name as any)?.en || String(product.name), ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'product', action: 'approve_product', entityType: 'product', entityId: req.params.id, entityLabel: (product.name as any)?.en || String(product.name), ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Product approved and published', data: product });
 });
 
 // ─── PATCH /products/:id/reject  (admin) ─────────────────────────────────────
 export const rejectProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await ProductsService.rejectProduct(req.params.id, req.body.approvalNote);
-  logActivity({ adminId: req.user!.id, action: 'reject_product', entityType: 'product', entityId: req.params.id, entityLabel: (product.name as any)?.en || String(product.name), metadata: { note: req.body.approvalNote }, ipAddress: req.ip });
+  logActivity({ userId: req.user!.id, role: 'admin', category: 'product', action: 'reject_product', entityType: 'product', entityId: req.params.id, entityLabel: (product.name as any)?.en || String(product.name), metadata: { note: req.body.approvalNote }, ipAddress: req.ip, userAgent: req.get('user-agent') });
   sendSuccess({ res, message: 'Product rejected', data: product });
 });
 
