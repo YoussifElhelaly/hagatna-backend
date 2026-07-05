@@ -174,10 +174,11 @@ model User {
 // ═══════════════════════════════════════════════════════
 
 model VendorPlan {
-  id          String   @id @default(uuid())
-  name        Json                          // LocalizedString
-  description Json?                         // LocalizedString
-  maxProducts Int?                          // null = unlimited
+  id                    String   @id @default(uuid())
+  name                  Json                          // LocalizedString
+  description           Json?                         // LocalizedString
+  maxProducts           Int?                          // null = unlimited
+  defaultCommissionRate Decimal? @db.Decimal(5, 2)    // copied to vendor.commissionRate on registration
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -272,6 +273,7 @@ model Category {
   attributeDefinitions AttributeDefinition[]
   vendorPlans          VendorPlanCategory[]
   loyaltyRedeemable    LoyaltyRedeemableCategory[]
+  promotions           PromotionCategory[]
 
   @@index([deletedAt])
   @@map("categories")
@@ -296,6 +298,8 @@ model Product {
   price              Decimal       @db.Decimal(12, 2)
   comparePrice       Decimal?      @db.Decimal(12, 2)
   costPrice          Decimal?      @db.Decimal(12, 2)
+  shippingClassId    String?
+  shippingClass      ShippingClass? @relation(fields: [shippingClassId], references: [id])
   sku                String?       @unique @db.VarChar(100)
   stockQuantity      Int           @default(0)
   lowStockThreshold  Int           @default(5)
@@ -634,6 +638,25 @@ model VendorCommission {
 //  SHIPPING
 // ═══════════════════════════════════════════════════════
 
+// Shipping class — cost profile shared by similar products (e.g. small / bulky / heavy).
+// Per order & vendor: cost = baseCost + (units − 1) × extraUnitCost, capped at maxCost.
+model ShippingClass {
+  id            String    @id @default(uuid())
+  name          Json                                  // LocalizedString
+  baseCost      Decimal   @db.Decimal(12, 2)          // first unit
+  extraUnitCost Decimal   @default(0) @db.Decimal(12, 2) // each additional unit
+  maxCost       Decimal?  @db.Decimal(12, 2)          // cap per class group per order (null = no cap)
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?                             // soft delete
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  products      Product[]
+
+  @@index([isActive])
+  @@map("shipping_classes")
+}
+
 model ShippingZone {
   id        String           @id @default(uuid())
   name      String           @db.VarChar(100)
@@ -771,11 +794,22 @@ model Promotion {
 
   // Relations
   usages             CouponUsage[]
+  categories         PromotionCategory[]           // empty = applies to all categories
 
   @@index([code])
   @@index([isActive])
   @@index([vendorId])
   @@map("promotions")
+}
+
+model PromotionCategory {
+  promotionId String
+  categoryId  String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, categoryId])
+  @@map("promotion_categories")
 }
 
 model CouponUsage {

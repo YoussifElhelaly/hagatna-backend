@@ -5,12 +5,27 @@ const LocalizedStringSchema = z.object({
   ar: z.string().min(1, 'Arabic text is required'),
 });
 
+// Optional localized text — empty strings allowed
+const OptionalLocalizedStringSchema = z.object({
+  en: z.string().optional().default(''),
+  ar: z.string().optional().default(''),
+});
+
+// Accepts absolute http(s) URLs OR site-relative paths like "/products/phones"
+const LinkUrlSchema = z
+  .string()
+  .max(2048)
+  .refine(
+    (v) => v.startsWith('/') || z.string().url().safeParse(v).success,
+    { message: 'Link must be a valid URL or a relative path starting with /' }
+  );
+
 export const CreateBannerSchema = z.object({
   title: LocalizedStringSchema,
-  description: LocalizedStringSchema,
+  description: OptionalLocalizedStringSchema.optional(),
   imageUrl: z.string().url('Invalid image URL'),
   imagePublicId: z.string().optional().default(''),
-  linkUrl: z.string().url('Invalid link URL').optional().nullable(),
+  linkUrl: LinkUrlSchema.optional().nullable(),
   order: z.number().int().min(0).optional().default(0),
   isActive: z.boolean().optional().default(true),
   startDate: z.string().datetime().optional().nullable(),
@@ -23,10 +38,10 @@ export const UpdateBannerSchema = z.object({
 
 export const UpdateBannerBodySchema = z.object({
   title: LocalizedStringSchema.optional(),
-  description: LocalizedStringSchema.optional(),
+  description: OptionalLocalizedStringSchema.optional(),
   imageUrl: z.string().url('Invalid image URL').optional(),
   imagePublicId: z.string().min(1).optional(),
-  linkUrl: z.string().url('Invalid link URL').optional().nullable(),
+  linkUrl: LinkUrlSchema.optional().nullable(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
   startDate: z.string().datetime().optional().nullable(),

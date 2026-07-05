@@ -5,6 +5,8 @@ import { buildPaginationMeta } from '@shared/utils/ApiResponse';
 import type {
   CreateZoneInput,
   UpdateZoneInput,
+  CreateShippingClassInput,
+  UpdateShippingClassInput,
   CreateMethodInput,
   UpdateMethodInput,
   CreateShipmentInput,
@@ -66,6 +68,52 @@ export const deleteZone = async (zoneId: string) => {
     throw ApiError.conflict(`Cannot delete: zone has ${zone._count.methods} method(s). Remove them first.`);
   }
   await prisma.shippingZone.update({ where: { id: zoneId }, data: { deletedAt: new Date() } });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHIPPING CLASSES  (admin manages; vendors/admin read for product forms)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const listShippingClasses = async (includeInactive = false) => {
+  return prisma.shippingClass.findMany({
+    where: { deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
+    orderBy: { createdAt: 'asc' },
+    include: { _count: { select: { products: { where: { deletedAt: null } } } } },
+  });
+};
+
+export const createShippingClass = async (input: CreateShippingClassInput) => {
+  return prisma.shippingClass.create({
+    data: input as never,
+    include: { _count: { select: { products: true } } },
+  });
+};
+
+export const updateShippingClass = async (classId: string, input: UpdateShippingClassInput) => {
+  const cls = await prisma.shippingClass.findFirst({ where: { id: classId, deletedAt: null } });
+  if (!cls) throw ApiError.notFound('Shipping class not found');
+  return prisma.shippingClass.update({
+    where: { id: classId },
+    data: input as never,
+    include: { _count: { select: { products: { where: { deletedAt: null } } } } },
+  });
+};
+
+export const deleteShippingClass = async (classId: string) => {
+  const cls = await prisma.shippingClass.findFirst({
+    where: { id: classId, deletedAt: null },
+    include: { _count: { select: { products: { where: { deletedAt: null } } } } },
+  });
+  if (!cls) throw ApiError.notFound('Shipping class not found');
+  if (cls._count.products > 0) {
+    throw ApiError.conflict(
+      `Cannot delete: ${cls._count.products} product(s) use this shipping class. Reassign them first.`
+    );
+  }
+  await prisma.shippingClass.update({
+    where: { id: classId },
+    data: { deletedAt: new Date(), isActive: false },
+  });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

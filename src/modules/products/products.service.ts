@@ -26,6 +26,10 @@ const productBaseSelect = {
   slug: true,
   price: true,
   comparePrice: true,
+  shippingClassId: true,
+  shippingClass: {
+    select: { id: true, name: true, baseCost: true, extraUnitCost: true, maxCost: true },
+  },
   sku: true,
   stockQuantity: true,
   lowStockThreshold: true,
@@ -300,6 +304,14 @@ export const getProductBySlug = async (slug: string, userId?: string) => {
     product = row as unknown as { id: string } & Record<string, unknown>;
   }
 
+  // Flatten attributes ({ value, definition:{...} } → { key, label, type, unit, value })
+  // so the storefront can render specs and comparisons directly
+  if (Array.isArray(product.attributes)) {
+    product.attributes = (product.attributes as { value: string; definition?: Record<string, unknown> }[]).map(
+      (a) => (a.definition ? { ...a.definition, value: a.value } : a)
+    );
+  }
+
   // Attach isWishlisted for the requesting user
   const [withWishlist] = await attachWishlistStatus([product], userId);
   return withWishlist;
@@ -353,6 +365,15 @@ export const getVendorProducts = async (userId: string, query: VendorProductsLis
 // ─────────────────────────────────────────────────────────────────────────────
 // createProduct  —  vendor only, always starts as 'draft'
 // ─────────────────────────────────────────────────────────────────────────────
+/** Throws if the given shipping class id doesn't reference an active class */
+const verifyShippingClass = async (shippingClassId?: string | null) => {
+  if (!shippingClassId) return;
+  const cls = await prisma.shippingClass.findFirst({
+    where: { id: shippingClassId, isActive: true, deletedAt: null },
+  });
+  if (!cls) throw ApiError.notFound('Shipping class not found or inactive');
+};
+
 export const createProduct = async (userId: string, input: CreateProductInput) => {
   const vendor = await resolveVendor(userId);
 
@@ -360,6 +381,7 @@ export const createProduct = async (userId: string, input: CreateProductInput) =
     where: { id: input.categoryId, isActive: true, deletedAt: null },
   });
   if (!category) throw ApiError.notFound('Category not found');
+  await verifyShippingClass(input.shippingClassId);
 
   const { variants = [], images = [], tags = [], ...baseData } = input;
   const slug = await generateUniqueSlug(input.name.en, 'product');
@@ -398,6 +420,7 @@ export const updateProduct = async (
     });
     if (!category) throw ApiError.notFound('Category not found');
   }
+  await verifyShippingClass(input.shippingClassId);
 
   let slug = existing.slug;
   if (input.name?.en && input.name.en !== (existing.name as { en: string }).en) {
@@ -657,6 +680,7 @@ export const adminCreateProduct = async (
     where: { id: baseData.categoryId, isActive: true, deletedAt: null },
   });
   if (!category) throw ApiError.notFound('Category not found');
+  await verifyShippingClass(baseData.shippingClassId);
 
   const slug = await generateUniqueSlug((baseData.name as { en: string }).en, 'product');
   const normalizedImages = normalizeImages(images as ProductImageInput[]);
@@ -703,6 +727,7 @@ export const adminUpdateProduct = async (
     });
     if (!category) throw ApiError.notFound('Category not found');
   }
+  await verifyShippingClass(input.shippingClassId);
 
   let slug = existing.slug;
   if (input.name?.en && input.name.en !== (existing.name as { en: string }).en) {

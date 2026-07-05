@@ -35,6 +35,28 @@ export const UpdateZoneSchema = z
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
 
+// ─── Shipping Class ───────────────────────────────────────────────────────────
+export const CreateShippingClassSchema = z.object({
+  name: localizedStringSchema,
+  baseCost: z.number().min(0),
+  extraUnitCost: z.number().min(0).optional().default(0),
+  maxCost: z.number().positive().optional(),
+  isActive: z.boolean().optional().default(true),
+}).refine(
+  (d) => !d.maxCost || d.maxCost >= d.baseCost,
+  { message: 'maxCost must be >= baseCost', path: ['maxCost'] }
+);
+
+export const UpdateShippingClassSchema = z
+  .object({
+    name: optionalLocalizedStringSchema,
+    baseCost: z.number().min(0).optional(),
+    extraUnitCost: z.number().min(0).optional(),
+    maxCost: z.number().positive().nullable().optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
+
 // ─── Shipping Method ──────────────────────────────────────────────────────────
 export const CreateMethodSchema = z.object({
   zoneId: z.string().uuid('Invalid zone ID'),

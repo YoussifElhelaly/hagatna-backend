@@ -15,13 +15,20 @@ export interface AdminListReturnsQuery {
   page: number;
   limit: number;
   status?: 'pending' | 'completed' | 'failed';
+  search?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildInclude() {
   return {
-    order: { select: { orderNumber: true, userId: true } },
+    order: {
+      select: {
+        orderNumber: true,
+        userId: true,
+        user: { select: { id: true, name: true, email: true, phone: true } },
+      },
+    },
     payment: { select: { id: true, method: true, transactionId: true } },
     orderItem: {
       select: {
@@ -199,10 +206,23 @@ export const vendorListReturns = async (
 
 // ─── 5. Admin: list all returns ───────────────────────────────────────────────
 export const adminListReturns = async (query: AdminListReturnsQuery) => {
-  const { page, limit, status } = query;
+  const { page, limit, status, search } = query;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.RefundWhereInput = status ? { status } : {};
+  const where: Prisma.RefundWhereInput = {
+    ...(status ? { status } : {}),
+    ...(search
+      ? {
+          order: {
+            OR: [
+              { orderNumber: { contains: search, mode: 'insensitive' } },
+              { user: { name: { contains: search, mode: 'insensitive' } } },
+              { user: { email: { contains: search, mode: 'insensitive' } } },
+            ],
+          },
+        }
+      : {}),
+  };
 
   const [refunds, total] = await Promise.all([
     prisma.refund.findMany({

@@ -6,6 +6,8 @@ import { ROLES } from '@shared/constants/roles';
 import {
   CreateZoneSchema,
   UpdateZoneSchema,
+  CreateShippingClassSchema,
+  UpdateShippingClassSchema,
   CreateMethodSchema,
   UpdateMethodSchema,
   CreateShipmentSchema,
@@ -28,6 +30,12 @@ router.get('/zones', authenticate, authorize(ROLES.ADMIN), ShippingController.li
 router.post('/zones', authenticate, authorize(ROLES.ADMIN), validate({ body: CreateZoneSchema }), ShippingController.createZone);
 router.patch('/zones/:id', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema, body: UpdateZoneSchema }), ShippingController.updateZone);
 router.delete('/zones/:id', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema }), ShippingController.deleteZone);
+
+// ─── Shipping Classes — read for any authenticated user (product forms), manage admin-only ──
+router.get('/classes', authenticate, ShippingController.listShippingClasses);
+router.post('/classes', authenticate, authorize(ROLES.ADMIN), validate({ body: CreateShippingClassSchema }), ShippingController.createShippingClass);
+router.patch('/classes/:id', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema, body: UpdateShippingClassSchema }), ShippingController.updateShippingClass);
+router.delete('/classes/:id', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema }), ShippingController.deleteShippingClass);
 
 // ─── Admin — Method Management ────────────────────────────────────────────────
 router.get('/methods', authenticate, authorize(ROLES.ADMIN), ShippingController.listMethods);

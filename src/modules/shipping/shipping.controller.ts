@@ -26,6 +26,30 @@ export const deleteZone = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess({ res, message: 'Shipping zone deleted', data: null });
 });
 
+// ─── Shipping Classes ─────────────────────────────────────────────────────────
+
+export const listShippingClasses = asyncHandler(async (req: Request, res: Response) => {
+  // Admin sees inactive classes too (for management); others only active
+  const isAdmin = (req.user as { role?: string } | undefined)?.role === ROLES.ADMIN;
+  const classes = await ShippingService.listShippingClasses(isAdmin);
+  sendSuccess({ res, message: 'Shipping classes retrieved', data: classes });
+});
+
+export const createShippingClass = asyncHandler(async (req: Request, res: Response) => {
+  const cls = await ShippingService.createShippingClass(req.body);
+  sendCreated(res, 'Shipping class created', cls);
+});
+
+export const updateShippingClass = asyncHandler(async (req: Request, res: Response) => {
+  const cls = await ShippingService.updateShippingClass(req.params.id, req.body);
+  sendSuccess({ res, message: 'Shipping class updated', data: cls });
+});
+
+export const deleteShippingClass = asyncHandler(async (req: Request, res: Response) => {
+  await ShippingService.deleteShippingClass(req.params.id);
+  sendSuccess({ res, message: 'Shipping class deleted', data: null });
+});
+
 // ─── Methods ──────────────────────────────────────────────────────────────────
 
 export const listMethods = asyncHandler(async (req: Request, res: Response) => {

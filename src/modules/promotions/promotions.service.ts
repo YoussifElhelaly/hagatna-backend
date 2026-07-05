@@ -27,7 +27,16 @@ const promotionSelect = {
   isActive: true,
   createdAt: true,
   vendor: { select: { id: true, storeName: true, storeSlug: true } },
+  categories: {
+    select: { category: { select: { id: true, name: true, slug: true } } },
+  },
 };
+
+// Flatten the categories join rows into plain category objects
+const shapePromotion = <T extends { categories?: { category: unknown }[] }>(promo: T) => ({
+  ...promo,
+  categories: promo.categories?.map((c) => c.category) ?? [],
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // listPromotions  —  admin sees all, vendor sees own
@@ -67,7 +76,7 @@ export const listPromotions = async (
     prisma.promotion.count({ where }),
   ]);
 
-  return { promotions, meta: buildPaginationMeta(total, page, limit) };
+  return { promotions: promotions.map(shapePromotion), meta: buildPaginationMeta(total, page, limit) };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +112,7 @@ export const getPromotion = async (
     throw ApiError.forbidden('Access denied');
   }
 
-  return promotion;
+  return shapePromotion(promotion);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -128,15 +137,28 @@ export const createPromotion = async (
     if (existing) throw ApiError.conflict(`Coupon code "${input.code}" is already in use`);
   }
 
-  return prisma.promotion.create({
+  const { categoryIds = [], ...promoData } = input;
+
+  // Validate categories exist
+  if (categoryIds.length > 0) {
+    const found = await prisma.category.count({ where: { id: { in: categoryIds }, deletedAt: null } });
+    if (found !== categoryIds.length) throw ApiError.badRequest('One or more categories not found');
+  }
+
+  const created = await prisma.promotion.create({
     data: {
-      ...input,
+      ...promoData,
       vendorId: resolvedVendorId,
       startsAt: new Date(input.startsAt),
       endsAt: input.endsAt ? new Date(input.endsAt) : null,
+      categories: categoryIds.length > 0
+        ? { create: categoryIds.map((categoryId) => ({ categoryId })) }
+        : undefined,
     },
     select: promotionSelect,
   });
+
+  return shapePromotion(created);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,17 +183,39 @@ export const updatePromotion = async (
     );
   }
 
-  return prisma.promotion.update({
-    where: { id: promotionId },
-    data: {
-      ...input,
-      ...(input.startsAt && { startsAt: new Date(input.startsAt) }),
-      ...(input.endsAt !== undefined && {
-        endsAt: input.endsAt ? new Date(input.endsAt) : null,
-      }),
-    },
-    select: promotionSelect,
+  const { categoryIds, ...promoData } = input;
+
+  // Validate categories exist if provided
+  if (categoryIds && categoryIds.length > 0) {
+    const found = await prisma.category.count({ where: { id: { in: categoryIds }, deletedAt: null } });
+    if (found !== categoryIds.length) throw ApiError.badRequest('One or more categories not found');
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    // Full-replace categories if provided (empty array = clear = all categories)
+    if (categoryIds !== undefined) {
+      await tx.promotionCategory.deleteMany({ where: { promotionId } });
+      if (categoryIds.length > 0) {
+        await tx.promotionCategory.createMany({
+          data: categoryIds.map((categoryId) => ({ promotionId, categoryId })),
+        });
+      }
+    }
+
+    return tx.promotion.update({
+      where: { id: promotionId },
+      data: {
+        ...promoData,
+        ...(input.startsAt && { startsAt: new Date(input.startsAt) }),
+        ...(input.endsAt !== undefined && {
+          endsAt: input.endsAt ? new Date(input.endsAt) : null,
+        }),
+      },
+      select: promotionSelect,
+    });
   });
+
+  return shapePromotion(updated);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -202,7 +246,10 @@ export const validateCoupon = async (
 ) => {
   const { code, subtotal = 0 } = query;
 
-  const promo = await prisma.promotion.findFirst({ where: { code, deletedAt: null } });
+  const promo = await prisma.promotion.findFirst({
+    where: { code, deletedAt: null },
+    include: { categories: { select: { categoryId: true } } },
+  });
 
   if (!promo || !promo.isActive) {
     throw ApiError.badRequest('Invalid or expired coupon code');
@@ -230,15 +277,35 @@ export const validateCoupon = async (
     throw ApiError.badRequest('You have already used this coupon the maximum number of times');
   }
 
+  // Category-scoped coupons only discount cart items in those categories
+  const promoCategoryIds = promo.categories.map((c) => c.categoryId);
+  let eligibleSubtotal = subtotal;
+  if (promoCategoryIds.length > 0) {
+    const cart = await prisma.cart.findUnique({
+      where: { userId },
+      include: { items: { include: { product: { select: { categoryId: true } } } } },
+    });
+    eligibleSubtotal = (cart?.items ?? []).reduce(
+      (sum, item) =>
+        promoCategoryIds.includes(item.product.categoryId)
+          ? sum + Number(item.priceSnapshot) * item.quantity
+          : sum,
+      0
+    );
+    if (eligibleSubtotal <= 0) {
+      throw ApiError.badRequest('This coupon does not apply to any items in your cart');
+    }
+  }
+
   // Compute discount
   let discountAmount: number;
   if (promo.discountType === DiscountType.percentage) {
-    discountAmount = (Number(promo.discountValue) / 100) * subtotal;
+    discountAmount = (Number(promo.discountValue) / 100) * eligibleSubtotal;
     if (promo.maxDiscountAmount) {
       discountAmount = Math.min(discountAmount, Number(promo.maxDiscountAmount));
     }
   } else {
-    discountAmount = Math.min(Number(promo.discountValue), subtotal);
+    discountAmount = Math.min(Number(promo.discountValue), eligibleSubtotal);
   }
   discountAmount = Number(discountAmount.toFixed(2));
 
@@ -253,5 +320,6 @@ export const validateCoupon = async (
     finalTotal: Number((subtotal - discountAmount).toFixed(2)),
     minPurchaseAmount: Number(promo.minPurchaseAmount),
     maxDiscountAmount: promo.maxDiscountAmount ? Number(promo.maxDiscountAmount) : null,
+    appliesToCategories: promoCategoryIds,   // empty = all categories
   };
 };

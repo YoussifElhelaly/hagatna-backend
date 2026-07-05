@@ -83,30 +83,45 @@ export const approvePayout = async (
 export const getCommissionsSummary = async (vendorId?: string) => {
   const where = vendorId ? { vendorId } : {};
 
-  const [totalEarned, totalPaid, totalPending] = await Promise.all([
+  const [totals, paidNet, pendingNet] = await Promise.all([
     prisma.vendorCommission.aggregate({
       where,
-      _sum: { commissionAmount: true },
+      _sum: { commissionAmount: true, netAmount: true, grossAmount: true },
     }),
     prisma.vendorCommission.aggregate({
       where: { ...where, status: PaymentStatus.completed },
-      _sum: { commissionAmount: true },
+      _sum: { netAmount: true },
     }),
     prisma.vendorCommission.aggregate({
       where: { ...where, status: PaymentStatus.pending },
-      _sum: { commissionAmount: true },
+      _sum: { netAmount: true },
     }),
   ]);
 
-  // Per-vendor breakdown (top 20)
-  const byVendor = await prisma.vendorCommission.groupBy({
-    by: ['vendorId'],
-    where,
-    _sum: { commissionAmount: true, netAmount: true, grossAmount: true },
-    _count: { id: true },
-    orderBy: { _sum: { commissionAmount: 'desc' } },
-    take: 20,
-  });
+  // Per-vendor breakdown (top 20) + pending/paid net split per vendor
+  const [byVendor, byVendorStatus] = await Promise.all([
+    prisma.vendorCommission.groupBy({
+      by: ['vendorId'],
+      where,
+      _sum: { commissionAmount: true, netAmount: true, grossAmount: true },
+      _count: { id: true },
+      orderBy: { _sum: { commissionAmount: 'desc' } },
+      take: 20,
+    }),
+    prisma.vendorCommission.groupBy({
+      by: ['vendorId', 'status'],
+      where,
+      _sum: { netAmount: true },
+    }),
+  ]);
+
+  const statusMap = new Map<string, { pending: number; paid: number }>();
+  for (const r of byVendorStatus) {
+    const entry = statusMap.get(r.vendorId) ?? { pending: 0, paid: 0 };
+    if (r.status === PaymentStatus.pending)   entry.pending = Number(r._sum.netAmount ?? 0);
+    if (r.status === PaymentStatus.completed) entry.paid    = Number(r._sum.netAmount ?? 0);
+    statusMap.set(r.vendorId, entry);
+  }
 
   const vendorIds = byVendor.map((r) => r.vendorId);
   const vendors = await prisma.vendorProfile.findMany({
@@ -117,9 +132,11 @@ export const getCommissionsSummary = async (vendorId?: string) => {
 
   return {
     summary: {
-      totalEarned: Number(totalEarned._sum.commissionAmount ?? 0),
-      totalPaid: Number(totalPaid._sum.commissionAmount ?? 0),
-      totalPending: Number(totalPending._sum.commissionAmount ?? 0),
+      totalGross:   Number(totals._sum.grossAmount ?? 0),       // total sales volume
+      totalEarned:  Number(totals._sum.commissionAmount ?? 0),  // platform commission
+      totalNet:     Number(totals._sum.netAmount ?? 0),         // total owed to vendors
+      totalPaid:    Number(paidNet._sum.netAmount ?? 0),        // net paid out to vendors
+      totalPending: Number(pendingNet._sum.netAmount ?? 0),     // net still owed to vendors
     },
     byVendor: byVendor.map((r) => ({
       vendor: vendorMap.get(r.vendorId) ?? null,
@@ -127,6 +144,8 @@ export const getCommissionsSummary = async (vendorId?: string) => {
       grossAmount: Number(r._sum.grossAmount ?? 0),
       commissionEarned: Number(r._sum.commissionAmount ?? 0),
       netToVendor: Number(r._sum.netAmount ?? 0),
+      pendingAmount: statusMap.get(r.vendorId)?.pending ?? 0,
+      paidAmount: statusMap.get(r.vendorId)?.paid ?? 0,
     })),
   };
 };

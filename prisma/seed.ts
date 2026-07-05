@@ -719,8 +719,6 @@ async function seedVendorProfiles(
           ar: 'وجهتك الأولى للإلكترونيات والأجهزة في غوام.',
         },
         storeSlug:      'techzone-guam',
-        logo:   'https://res.cloudinary.com/demo/image/upload/v1/hagatna/vendors/techzone-logo.jpg',
-        banner: 'https://res.cloudinary.com/demo/image/upload/v1/hagatna/vendors/techzone-banner.jpg',
         address: '150 Pale San Vitores Road',
         city:    'Tumon',
         country: 'GU',
@@ -739,8 +737,6 @@ async function seedVendorProfiles(
           ar: 'نحتفل بالأزياء الباسيفيكية والعربية. ملابس فريدة تمزج التقاليد مع الأسلوب الحديث.',
         },
         storeSlug:      'island-fashion-house',
-        logo:   'https://res.cloudinary.com/demo/image/upload/v1/hagatna/vendors/fashion-logo.jpg',
-        banner: 'https://res.cloudinary.com/demo/image/upload/v1/hagatna/vendors/fashion-banner.jpg',
         address: '88 Chalan San Antonio',
         city:    'Tamuning',
         country: 'GU',
@@ -1098,10 +1094,11 @@ async function seedProducts(
 async function seedShipping() {
   console.log('🚚 Seeding shipping...');
 
-  const [localZone, usaZone, intlZone] = await Promise.all([
+  const [localZone, usaZone, intlZone, egyptZone] = await Promise.all([
     prisma.shippingZone.create({ data: { name: 'Guam Local', countries: ['GU'], isActive: true } }),
     prisma.shippingZone.create({ data: { name: 'United States', countries: ['US'], isActive: true } }),
     prisma.shippingZone.create({ data: { name: 'International', countries: ['AE', 'SA', 'KW', 'QA', 'BH', 'OM', 'JP', 'AU', 'GB'], isActive: true } }),
+    prisma.shippingZone.create({ data: { name: 'Egypt', countries: ['EG'], isActive: true } }),
   ]);
 
   await Promise.all([
@@ -1112,9 +1109,12 @@ async function seedShipping() {
     prisma.shippingMethod.create({ data: { zoneId: usaZone.id, name: { en: 'FedEx Express', ar: 'فيدإكس إكسبريس' }, minDays: 1, maxDays: 3, price: dec(34.99), isFree: false, isActive: true } }),
     prisma.shippingMethod.create({ data: { zoneId: intlZone.id, name: { en: 'International Standard', ar: 'الشحن الدولي العادي' }, minDays: 7, maxDays: 14, price: dec(29.99), isFree: false, isActive: true } }),
     prisma.shippingMethod.create({ data: { zoneId: intlZone.id, name: { en: 'International Express', ar: 'الشحن الدولي السريع' }, minDays: 3, maxDays: 7, price: dec(59.99), isFree: false, isActive: true } }),
+    // Egypt: regular = 0 (product shipping-class costs apply), express = surcharge on top
+    prisma.shippingMethod.create({ data: { zoneId: egyptZone.id, name: { en: 'Standard Delivery', ar: 'توصيل عادي' }, minDays: 2, maxDays: 5, price: dec(0.00), isFree: false, isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: egyptZone.id, name: { en: 'Express Delivery', ar: 'توصيل سريع' }, minDays: 1, maxDays: 2, price: dec(100.00), isFree: false, isActive: true } }),
   ]);
 
-  console.log(`   ✓ 3 shipping zones + 7 methods`);
+  console.log(`   ✓ 4 shipping zones + 9 methods`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

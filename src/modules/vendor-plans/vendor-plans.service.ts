@@ -14,6 +14,7 @@ const planSelect = {
   name:        true,
   description: true,
   maxProducts: true,
+  defaultCommissionRate: true,
   isActive:    true,
   sortOrder:   true,
   createdAt:   true,
@@ -105,6 +106,7 @@ export const createPlan = async (input: CreateVendorPlanInput) => {
       name:        input.name as never,
       description: input.description ? (input.description as never) : undefined,
       maxProducts: input.maxProducts ?? null,
+      defaultCommissionRate: input.defaultCommissionRate ?? null,
       isActive:    input.isActive ?? true,
       sortOrder:   input.sortOrder ?? 0,
       categories: {
@@ -152,6 +154,7 @@ export const updatePlan = async (id: string, input: UpdateVendorPlanInput) => {
         ...(input.name        && { name:        input.name as never }),
         ...(input.description && { description: input.description as never }),
         ...(input.maxProducts !== undefined && { maxProducts: input.maxProducts }),
+        ...(input.defaultCommissionRate !== undefined && { defaultCommissionRate: input.defaultCommissionRate }),
         ...(input.isActive    !== undefined && { isActive:    input.isActive }),
         ...(input.sortOrder   !== undefined && { sortOrder:   input.sortOrder }),
       },

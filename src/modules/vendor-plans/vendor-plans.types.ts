@@ -5,6 +5,7 @@ export interface CreateVendorPlanInput {
   name: LocalizedString;
   description?: LocalizedString;
   maxProducts?: number;            // null / undefined = unlimited
+  defaultCommissionRate?: number;  // copied to vendor.commissionRate on registration
   categoryIds: string[];           // must have at least 1
   isActive?: boolean;
   sortOrder?: number;
@@ -15,6 +16,7 @@ export interface UpdateVendorPlanInput {
   name?: LocalizedString;
   description?: LocalizedString;
   maxProducts?: number | null;     // null explicitly removes the limit
+  defaultCommissionRate?: number | null;
   categoryIds?: string[];
   isActive?: boolean;
   sortOrder?: number;

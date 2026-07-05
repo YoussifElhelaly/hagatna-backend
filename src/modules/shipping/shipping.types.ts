@@ -15,6 +15,23 @@ export interface UpdateZoneInput {
   isActive?: boolean;
 }
 
+// ─── Shipping Class ───────────────────────────────────────────────────────────
+export interface CreateShippingClassInput {
+  name: LocalizedString;
+  baseCost: number;
+  extraUnitCost?: number;
+  maxCost?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateShippingClassInput {
+  name?: LocalizedString;
+  baseCost?: number;
+  extraUnitCost?: number;
+  maxCost?: number | null;
+  isActive?: boolean;
+}
+
 // ─── Shipping Method ──────────────────────────────────────────────────────────
 export interface CreateMethodInput {
   zoneId: string;

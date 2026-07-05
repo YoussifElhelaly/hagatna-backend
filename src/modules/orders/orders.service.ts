@@ -78,13 +78,18 @@ const generateOrderNumber = async (): Promise<string> => {
   return orderNumber!;
 };
 
-/** Validate a coupon code and return the discount amount */
+/** Validate a coupon code and return the discount amount.
+ *  Category-scoped coupons only discount the eligible portion of the cart. */
 const validateCoupon = async (
   code: string,
   userId: string,
-  subtotal: number
-): Promise<{ promotionId: string; discountAmount: number }> => {
-  const promo = await prisma.promotion.findUnique({ where: { code } });
+  subtotal: number,
+  items: { priceSnapshot: unknown; quantity: number; product: { categoryId: string } }[]
+): Promise<{ promotionId: string; discountAmount: number; categoryIds: string[]; eligibleSubtotal: number }> => {
+  const promo = await prisma.promotion.findUnique({
+    where: { code },
+    include: { categories: { select: { categoryId: true } } },
+  });
 
   if (!promo || !promo.isActive) throw ApiError.badRequest('Invalid or expired coupon code');
 
@@ -110,18 +115,39 @@ const validateCoupon = async (
     throw ApiError.badRequest('You have already used this coupon');
   }
 
+  // Category-scoped coupons only discount items in those categories
+  const categoryIds = promo.categories.map((c) => c.categoryId);
+  let eligibleSubtotal = subtotal;
+  if (categoryIds.length > 0) {
+    eligibleSubtotal = items.reduce(
+      (sum, item) =>
+        categoryIds.includes(item.product.categoryId)
+          ? sum + Number(item.priceSnapshot) * item.quantity
+          : sum,
+      0
+    );
+    if (eligibleSubtotal <= 0) {
+      throw ApiError.badRequest('This coupon does not apply to any items in your cart');
+    }
+  }
+
   // Compute discount
   let discountAmount: number;
   if (promo.discountType === DiscountType.percentage) {
-    discountAmount = (Number(promo.discountValue) / 100) * subtotal;
+    discountAmount = (Number(promo.discountValue) / 100) * eligibleSubtotal;
     if (promo.maxDiscountAmount) {
       discountAmount = Math.min(discountAmount, Number(promo.maxDiscountAmount));
     }
   } else {
-    discountAmount = Math.min(Number(promo.discountValue), subtotal);
+    discountAmount = Math.min(Number(promo.discountValue), eligibleSubtotal);
   }
 
-  return { promotionId: promo.id, discountAmount: Number(discountAmount.toFixed(2)) };
+  return {
+    promotionId: promo.id,
+    discountAmount: Number(discountAmount.toFixed(2)),
+    categoryIds,
+    eligibleSubtotal,
+  };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -157,6 +183,9 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
             include: {
               vendor: { select: { id: true, commissionRate: true, status: true, storeName: true } },
               images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+              shippingClass: {
+                select: { id: true, baseCost: true, extraUnitCost: true, maxCost: true, isActive: true },
+              },
             },
           },
           variant: true,
@@ -205,10 +234,14 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
   // ── 5. Validate coupon (once, against overall subtotal) ───────────────────
   let totalDiscountAmount = 0;
   let promotionId: string | undefined;
+  let couponCategoryIds: string[] = [];
+  let totalCouponEligibleSubtotal = totalSubtotal;
   if (couponCode) {
-    const coupon = await validateCoupon(couponCode, userId, totalSubtotal);
+    const coupon = await validateCoupon(couponCode, userId, totalSubtotal, cart.items as never);
     totalDiscountAmount = coupon.discountAmount;
     promotionId = coupon.promotionId;
+    couponCategoryIds = coupon.categoryIds;
+    totalCouponEligibleSubtotal = coupon.eligibleSubtotal;
   }
 
   // ── 6. Pre-validate loyalty points redemption ─────────────────────────────
@@ -285,7 +318,20 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
         0
       );
       const vendorRatio = vendorSubtotal / totalSubtotal;
-      const vendorDiscountAmount = Number((totalDiscountAmount * vendorRatio).toFixed(2));
+
+      // Coupon discount distributed by each vendor's share of the COUPON-ELIGIBLE subtotal
+      const vendorCouponEligible = couponCategoryIds.length === 0
+        ? vendorSubtotal
+        : items.reduce((sum, item) => {
+            if (couponCategoryIds.includes((item.product as any).categoryId)) {
+              return sum + Number(item.priceSnapshot) * item.quantity;
+            }
+            return sum;
+          }, 0);
+      const couponRatio = totalCouponEligibleSubtotal > 0
+        ? vendorCouponEligible / totalCouponEligibleSubtotal
+        : 0;
+      const vendorDiscountAmount = Number((totalDiscountAmount * couponRatio).toFixed(2));
 
       // Points discount distributed by each vendor's share of ELIGIBLE subtotal
       const vendorEligibleSubtotal = redeemableCategoryIds.length === 0
@@ -299,7 +345,29 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
       const pointsRatio = totalEligibleSubtotal > 0 ? vendorEligibleSubtotal / totalEligibleSubtotal : 0;
       const vendorPointsDiscount = Number((totalPointsDiscount * pointsRatio).toFixed(2));
       const vendorRedeemedPoints = Math.round(totalRedeemedPoints * pointsRatio);
-      const vendorShippingFee = Number((totalShippingFee * vendorRatio).toFixed(2));
+      // Class-based product shipping: group this vendor's items by shipping class;
+      // cost per class = baseCost + (units − 1) × extraUnitCost, capped at maxCost.
+      // The shipping-method fee (e.g. express surcharge) is split proportionally on top.
+      const classGroups = new Map<string, { baseCost: number; extraUnitCost: number; maxCost: number | null; units: number }>();
+      for (const item of items) {
+        const cls = (item.product as any).shippingClass;
+        if (!cls || !cls.isActive) continue;
+        const entry = classGroups.get(cls.id) ?? {
+          baseCost: Number(cls.baseCost),
+          extraUnitCost: Number(cls.extraUnitCost),
+          maxCost: cls.maxCost != null ? Number(cls.maxCost) : null,
+          units: 0,
+        };
+        entry.units += item.quantity;
+        classGroups.set(cls.id, entry);
+      }
+      let vendorProductShipping = 0;
+      for (const g of classGroups.values()) {
+        let cost = g.baseCost + Math.max(0, g.units - 1) * g.extraUnitCost;
+        if (g.maxCost != null) cost = Math.min(cost, g.maxCost);
+        vendorProductShipping += cost;
+      }
+      const vendorShippingFee = Number((totalShippingFee * vendorRatio + vendorProductShipping).toFixed(2));
       const vendorFinalTotal = Number(
         Math.max(0, vendorSubtotal - vendorDiscountAmount - vendorPointsDiscount + vendorShippingFee).toFixed(2)
       );

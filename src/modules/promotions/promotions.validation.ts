@@ -22,10 +22,7 @@ export const CreatePromotionSchema = z
       .regex(/^[A-Z0-9_-]+$/, 'Coupon code must be uppercase alphanumeric (A-Z, 0-9, _, -)')
       .optional(),
     discountType: z.nativeEnum(DiscountType),
-    discountValue: z
-      .number()
-      .positive('Discount value must be positive')
-      .max(100, 'Percentage discount cannot exceed 100%'),
+    discountValue: z.number().positive('Discount value must be positive'),
     minPurchaseAmount: z.number().min(0).optional().default(0),
     maxDiscountAmount: z.number().positive().optional(),
     usageLimitTotal: z.number().int().positive().optional(),
@@ -34,6 +31,7 @@ export const CreatePromotionSchema = z
     endsAt: z.string().datetime({ offset: true }).optional(),
     isActive: z.boolean().optional().default(true),
     vendorId: z.string().uuid().optional(),
+    categoryIds: z.array(z.string().uuid()).optional().default([]),   // empty = all categories
   })
   .refine(
     (d) => d.type !== PromotionType.coupon || !!d.code,
@@ -52,7 +50,7 @@ export const CreatePromotionSchema = z
 export const UpdatePromotionSchema = z
   .object({
     name: optionalLocalizedStringSchema,
-    discountValue: z.number().positive().max(100).optional(),
+    discountValue: z.number().positive().optional(),
     minPurchaseAmount: z.number().min(0).optional(),
     maxDiscountAmount: z.number().positive().nullable().optional(),
     usageLimitTotal: z.number().int().positive().nullable().optional(),
@@ -60,6 +58,7 @@ export const UpdatePromotionSchema = z
     startsAt: z.string().datetime({ offset: true }).optional(),
     endsAt: z.string().datetime({ offset: true }).nullable().optional(),
     isActive: z.boolean().optional(),
+    categoryIds: z.array(z.string().uuid()).optional(),   // empty = all categories
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
 

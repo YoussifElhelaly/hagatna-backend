@@ -10,7 +10,8 @@ export const CreateVendorPlanSchema = z.object({
   name:        LocalizedStringSchema,
   description: z.object({ en: z.string(), ar: z.string() }).optional(),
   maxProducts: z.number().int().positive().optional(),
-  categoryIds: z.array(z.string().uuid()).min(1, 'At least one category is required'),
+  defaultCommissionRate: z.number().min(0).max(100).optional(),
+  categoryIds: z.array(z.string().uuid()).optional().default([]),   // empty = all categories allowed
   isActive:    z.boolean().optional(),
   sortOrder:   z.number().int().optional(),
 });
@@ -20,7 +21,8 @@ export const UpdateVendorPlanSchema = z.object({
   name:        LocalizedStringSchema.optional(),
   description: z.object({ en: z.string(), ar: z.string() }).optional(),
   maxProducts: z.number().int().positive().nullable().optional(),
-  categoryIds: z.array(z.string().uuid()).min(1).optional(),
+  defaultCommissionRate: z.number().min(0).max(100).nullable().optional(),
+  categoryIds: z.array(z.string().uuid()).optional(),   // empty = all categories allowed
   isActive:    z.boolean().optional(),
   sortOrder:   z.number().int().optional(),
 });

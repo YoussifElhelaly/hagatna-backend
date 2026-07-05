@@ -40,6 +40,7 @@ export interface CreateProductInput {
   price: number;
   comparePrice?: number;
   costPrice?: number;
+  shippingClassId?: string;
   sku?: string;
   stockQuantity?: number;
   lowStockThreshold?: number;
@@ -56,6 +57,7 @@ export interface UpdateProductInput {
   price?: number;
   comparePrice?: number;
   costPrice?: number;
+  shippingClassId?: string | null;
   sku?: string;
   stockQuantity?: number;
   lowStockThreshold?: number;

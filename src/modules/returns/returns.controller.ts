@@ -45,8 +45,9 @@ export const adminListReturns = asyncHandler(async (req: Request, res: Response)
   const page   = Math.max(1, parseInt(req.query.page  as string) || 1);
   const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
   const status = req.query.status as 'pending' | 'completed' | 'failed' | undefined;
+  const search = (req.query.search as string | undefined)?.trim() || undefined;
 
-  const result = await ReturnsService.adminListReturns({ page, limit, status });
+  const result = await ReturnsService.adminListReturns({ page, limit, status, search });
   sendSuccess({ res, message: 'All returns retrieved', data: result.refunds, meta: result.meta });
 });
 

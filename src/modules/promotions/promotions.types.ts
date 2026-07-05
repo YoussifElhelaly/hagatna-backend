@@ -16,6 +16,7 @@ export interface CreatePromotionInput {
   endsAt?: string;
   isActive?: boolean;
   vendorId?: string;              // null = platform-wide (admin only)
+  categoryIds?: string[];         // empty = applies to all categories
 }
 
 // ─── Update ───────────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ export interface UpdatePromotionInput {
   startsAt?: string;
   endsAt?: string | null;
   isActive?: boolean;
+  categoryIds?: string[];         // empty = applies to all categories
 }
 
 // ─── List query ───────────────────────────────────────────────────────────────

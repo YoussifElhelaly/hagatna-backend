@@ -62,10 +62,15 @@ export const onboard = async (userId: string, input: OnboardVendorInput) => {
   // Validate plan exists and is active
   const plan = await prisma.vendorPlan.findUnique({
     where:  { id: input.planId },
-    select: { id: true, isActive: true },
+    select: { id: true, isActive: true, defaultCommissionRate: true },
   });
   if (!plan)          throw ApiError.notFound('Vendor plan not found');
   if (!plan.isActive) throw ApiError.badRequest('This vendor plan is no longer available');
+
+  // Plan's default commission is copied onto the vendor (admin can override later)
+  const planCommission = plan.defaultCommissionRate != null
+    ? { commissionRate: plan.defaultCommissionRate }
+    : {};
 
   // One application per user
   const existing = await prisma.vendorProfile.findUnique({ where: { userId } });
@@ -85,7 +90,7 @@ export const onboard = async (userId: string, input: OnboardVendorInput) => {
     const { planId, ...rest } = input;
     const updated = await prisma.vendorProfile.update({
       where: { userId },
-      data:  { ...rest, planId, storeSlug, status: VendorStatus.pending, rejectionReason: null },
+      data:  { ...rest, planId, storeSlug, status: VendorStatus.pending, rejectionReason: null, ...planCommission },
       select: vendorSelect,
     });
     return shapeVendor(updated as any);
@@ -95,7 +100,7 @@ export const onboard = async (userId: string, input: OnboardVendorInput) => {
   const { planId, ...rest } = input;
 
   const created = await prisma.vendorProfile.create({
-    data: { ...rest, planId, userId, storeSlug },
+    data: { ...rest, planId, userId, storeSlug, ...planCommission },
     select: vendorSelect,
   });
   return shapeVendor(created as any);

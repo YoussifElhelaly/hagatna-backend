@@ -365,7 +365,7 @@ const baseTemplate = (contentEn: string, contentAr: string): string => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>Hagtna<span class="dot">.</span></h1>
+      <h1>Hagatna<span class="dot">.</span></h1>
       <p>Multi-Vendor E-commerce Platform</p>
     </div>
     <div class="body">
@@ -374,7 +374,7 @@ const baseTemplate = (contentEn: string, contentAr: string): string => `
       <div class="ar-section">${contentAr}</div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Hagtna. All rights reserved.<br/>
+      <p>© ${new Date().getFullYear()} Hagatna. All rights reserved.<br/>
       If you did not request this email, please ignore it.</p>
     </div>
   </div>
@@ -582,14 +582,14 @@ const singleTemplate = (content: string): string => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>Hagtna<span class="dot">.</span></h1>
+      <h1>Hagatna<span class="dot">.</span></h1>
       <p>Multi-Vendor E-commerce Platform</p>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Hagtna. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} Hagatna. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -610,7 +610,7 @@ export const sendVendorVerificationEmail = async (
 ): Promise<void> => {
   const contentEn = `
     <h2>Verify Your Email</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, thank you for registering as a vendor on Hagtna! Please verify your email to activate your account.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, thank you for registering as a vendor on Hagatna! Please verify your email to activate your account.</p>
     <div class="otp-block">
       <div class="otp-label">VERIFICATION CODE</div>
       <div class="otp-code">${otp}</div>
@@ -638,7 +638,7 @@ export const sendVendorVerificationEmail = async (
     <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص.</p>
   `;
 
-  await send(to, 'Verify your Hagtna vendor account / تحقق من حسابك كبائع', baseTemplate(contentEn, contentAr));
+  await send(to, 'Verify your Hagatna vendor account / تحقق من حسابك كبائع', baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Welcome (after verification) ─────────────────────────────────────
@@ -648,7 +648,7 @@ export const sendVendorWelcomeEmail = async (
   storeName: string,
 ): Promise<void> => {
   const contentEn = `
-    <h2>Welcome to Hagtna!</h2>
+    <h2>Welcome to Hagatna!</h2>
     <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, your email has been verified and your store <strong>"${storeName}"</strong> is now under review.</p>
     <div class="card">
       <p style="font-size:14px;color:${DS.onSurfaceVar};">
@@ -675,7 +675,7 @@ export const sendVendorWelcomeEmail = async (
     </div>
   `;
 
-  await send(to, 'Welcome to Hagtna! / مرحباً بك في هاجاتنا!', baseTemplate(contentEn, contentAr));
+  await send(to, 'Welcome to Hagatna! / مرحباً بك في هاجاتنا!', baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Welcome (after admin approval) ───────────────────────────────────
@@ -686,7 +686,7 @@ export const sendVendorApprovedEmail = async (
 ): Promise<void> => {
   const contentEn = `
     <h2>🎉 Your Store is Approved!</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, great news! Your store <strong>"${storeName}"</strong> has been approved and is now live on Hagtna.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, great news! Your store <strong>"${storeName}"</strong> has been approved and is now live on Hagatna.</p>
     <div class="card">
       <p style="font-size:14px;color:${DS.onSurfaceVar};">
         You can now start adding products, managing orders, and growing your business. Welcome aboard!
@@ -1268,7 +1268,7 @@ export const sendCustomerVerificationEmail = async (
 ): Promise<void> => {
   const contentEn = `
     <h2>Verify Your Email</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, welcome to Hagtna! Use the code below to verify your email and activate your account.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, welcome to Hagatna! Use the code below to verify your email and activate your account.</p>
 
     <div class="otp-block">
       <div class="otp-label">VERIFICATION CODE</div>
@@ -1276,7 +1276,7 @@ export const sendCustomerVerificationEmail = async (
       <div class="otp-expire">Expires in 10 minutes</div>
     </div>
 
-    <p class="text-muted text-center">Never share this code with anyone. Hagtna will never ask for your OTP.</p>
+    <p class="text-muted text-center">Never share this code with anyone. Hagatna will never ask for your OTP.</p>
   `;
 
   const contentAr = `
@@ -1292,7 +1292,7 @@ export const sendCustomerVerificationEmail = async (
     <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص. لن تطلب هاجاتنا رمز التحقق أبداً.</p>
   `;
 
-  await send(to, 'Verify your Hagtna account / تحقق من حسابك في هاجاتنا', baseTemplate(contentEn, contentAr));
+  await send(to, 'Verify your Hagatna account / تحقق من حسابك في هاجاتنا', baseTemplate(contentEn, contentAr));
 };
 
 // ─── Customer: Order Placed ───────────────────────────────────────────────────
@@ -1319,15 +1319,15 @@ export const sendCustomerOrderPlacedEmail = async (
   `).join('');
 
   const contentEn = `
-    <h2>Order Confirmed! 🎉</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${customerName}</strong>, your order has been placed successfully.</p>
+    <h2>Order Received! 🎉</h2>
+    <p style="margin-bottom:16px;">Hi <strong>${customerName}</strong>, we've received your order and it's now awaiting confirmation.</p>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <div>
         <span class="text-muted">Order Number</span><br/>
         <span style="font-family:${DS.fontHeadline};font-size:16px;font-weight:800;color:${DS.onSurface};">#${orderNumber}</span>
       </div>
-      <span class="badge badge-success">Confirmed</span>
+      <span class="badge badge-success">Placed</span>
     </div>
 
     <div class="card">
@@ -1362,15 +1362,15 @@ export const sendCustomerOrderPlacedEmail = async (
   `;
 
   const contentAr = `
-    <h2>تم تأكيد الطلب! 🎉</h2>
-    <p style="margin-bottom:16px;">مرحباً <strong>${customerName}</strong>، تم تقديم طلبك بنجاح.</p>
+    <h2>تم استلام طلبك! 🎉</h2>
+    <p style="margin-bottom:16px;">مرحباً <strong>${customerName}</strong>، استلمنا طلبك بنجاح وهو الآن في انتظار التأكيد.</p>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <div>
         <span class="text-muted">رقم الطلب</span><br/>
         <span style="font-family:${DS.fontHeadline};font-size:16px;font-weight:800;color:${DS.onSurface};">#${orderNumber}</span>
       </div>
-      <span class="badge badge-success">مؤكد</span>
+      <span class="badge badge-success">تم الاستلام</span>
     </div>
 
     <div class="card">
@@ -1404,7 +1404,7 @@ export const sendCustomerOrderPlacedEmail = async (
     </div>
   `;
 
-  await send(to, `Order confirmed #${orderNumber} / تم تأكيد الطلب #${orderNumber}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Order received #${orderNumber} / تم استلام طلبك #${orderNumber}`, baseTemplate(contentEn, contentAr));
 };
 
 // ─── Customer: Order Status Change ────────────────────────────────────────────
@@ -1603,13 +1603,13 @@ export const sendOtpEmail = async (to: string, name: string, otp: string): Promi
   const eName = esc(name);
   const contentEn = `
     <h2>Verify Your Email Address</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, welcome to Hagtna! Use the code below to verify your email address and activate your account.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, welcome to Hagatna! Use the code below to verify your email address and activate your account.</p>
     <div class="otp-block">
       <div class="otp-label">VERIFICATION CODE</div>
       <div class="otp-code">${otp}</div>
       <div class="otp-expire">Expires in 10 minutes</div>
     </div>
-    <p class="text-muted text-center">Never share this code with anyone. Hagtna will never ask for your OTP.</p>
+    <p class="text-muted text-center">Never share this code with anyone. Hagatna will never ask for your OTP.</p>
   `;
 
   const contentAr = `
@@ -1631,7 +1631,7 @@ export const sendPasswordResetEmail = async (to: string, name: string, resetUrl:
   const eName = esc(name);
   const contentEn = `
     <h2>Reset Your Password</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, we received a request to reset the password for your Hagtna account. Click the button below to set a new password.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, we received a request to reset the password for your Hagatna account. Click the button below to set a new password.</p>
     <div class="text-center mt-4 mb-4">
       <a href="${resetUrl}" class="btn-cta">Reset My Password</a>
     </div>
@@ -1656,7 +1656,7 @@ export const sendPasswordResetEmail = async (to: string, name: string, resetUrl:
 export const sendWelcomeEmail = async (to: string, name: string): Promise<void> => {
   const eName = esc(name);
   const contentEn = `
-    <h2>Welcome to Hagtna!</h2>
+    <h2>Welcome to Hagatna!</h2>
     <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, your account has been successfully verified. Start exploring thousands of products from our trusted vendors.</p>
     <div class="text-center mt-4">
       <a href="${env.FRONTEND_URL}/shop" class="btn-cta">Start Shopping</a>
