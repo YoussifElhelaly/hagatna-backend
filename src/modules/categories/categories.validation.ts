@@ -21,7 +21,7 @@ export const CreateCategorySchema = z.object({
   ),
   description: optionalLocalizedStringSchema,
   parentId: z.string().uuid('Invalid parent category ID').optional(),
-  image: z.string().url('Invalid image URL').optional(),
+  image: z.string().min(1).optional(),
   sortOrder: z.number().int().min(0).optional().default(0),
 });
 
@@ -32,7 +32,7 @@ export const UpdateCategorySchema = z
     description: optionalLocalizedStringSchema,
     // Allow null to move to top-level, uuid string to re-parent
     parentId: z.string().uuid('Invalid parent category ID').nullable().optional(),
-    image: z.string().url('Invalid image URL').optional(),
+    image: z.string().min(1).optional(),
     sortOrder: z.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
   })
