@@ -33,6 +33,7 @@ export const RedisKeys = {
     attributeDefinitions: (categoryId: string) => `cache:attrs:${categoryId}`,
     storefrontStats: () => 'cache:stats',
     brands: () => 'cache:brands',
+    homeSections: () => 'cache:home-sections',
   },
 };
 
@@ -45,4 +46,5 @@ export const TTL = {
   FEATURED: 600,        // 10 minutes
   STATS: 300,           // 5 minutes
   BRANDS: 3600,         // 1 hour
+  HOME_SECTIONS: 120,   // 2 minutes
 };

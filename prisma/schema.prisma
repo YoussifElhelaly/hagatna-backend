@@ -1172,3 +1172,41 @@ model Setting {
 
   @@map("settings")
 }
+
+// ═══════════════════════════════════════════════════════
+//  HOME SECTIONS (storefront home page layout config)
+// ═══════════════════════════════════════════════════════
+
+model HomeSection {
+  id        String   @id @default(uuid())
+  key       String   @unique @db.VarChar(50)   // canonical section key the storefront renders by
+  enabled   Boolean  @default(true)
+  sortOrder Int      @default(0)
+  titleEn   String?  @db.VarChar(255)
+  titleAr   String?  @db.VarChar(255)
+  itemLimit Int?
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, sortOrder])
+  @@map("home_sections")
+}
+
+// ═══════════════════════════════════════════════════════
+//  PROMO BANNERS (home page promotional blocks)
+// ═══════════════════════════════════════════════════════
+
+model PromoBanner {
+  id        String   @id @default(uuid())
+  title     Json     @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
+  subtitle  Json     @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
+  ctaText   Json     @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
+  linkUrl   String?  @db.VarChar(500)
+  gradient  String?  @db.VarChar(255)                          // optional CSS gradient string
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+  @@map("promo_banners")
+}

@@ -1985,6 +1985,32 @@ async function seedOrderWorkflows(
   console.log(`   ✓ 2 approved reviews (verified purchase)`);
   console.log(`   ✓ 12 notifications across all users`);
   console.log(`   ✓ 3 conversations + 14 messages`);
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Home page config — home sections (canonical keys, default order)
+  // ───────────────────────────────────────────────────────────────────────────
+  const homeSectionDefaults: Array<{ key: string; sortOrder: number; itemLimit: number | null }> = [
+    { key: 'bannerCarousel', sortOrder: 1,  itemLimit: null },
+    { key: 'sectorCards',    sortOrder: 2,  itemLimit: null },
+    { key: 'flashDeals',     sortOrder: 3,  itemLimit: 10 },
+    { key: 'categories',     sortOrder: 4,  itemLimit: 12 },
+    { key: 'newArrivals',    sortOrder: 5,  itemLimit: 10 },
+    { key: 'promoBanners',   sortOrder: 6,  itemLimit: null },
+    { key: 'productColumns', sortOrder: 7,  itemLimit: 8 },
+    { key: 'dealOfDay',      sortOrder: 8,  itemLimit: null },
+    { key: 'newsletter',     sortOrder: 9,  itemLimit: null },
+    { key: 'brands',         sortOrder: 10, itemLimit: 20 },
+    { key: 'trustBar',       sortOrder: 11, itemLimit: null },
+  ];
+
+  for (const s of homeSectionDefaults) {
+    await prisma.homeSection.upsert({
+      where:  { key: s.key },
+      create: { key: s.key, enabled: true, sortOrder: s.sortOrder, itemLimit: s.itemLimit },
+      update: {},   // idempotent — never overwrite admin-tuned config on re-seed
+    });
+  }
+  console.log(`   ✓ ${homeSectionDefaults.length} home sections seeded`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
