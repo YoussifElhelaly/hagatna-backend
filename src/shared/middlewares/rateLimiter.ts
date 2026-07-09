@@ -28,6 +28,19 @@ export const authRateLimiter = rateLimit({
   },
 });
 
+/** Newsletter subscribe limiter — prevents signup spam / list stuffing */
+export const newsletterRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,                   // 10 subscribe attempts / hour / IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+  keyGenerator: (req) => req.ip ?? 'unknown',
+  handler: (_req, _res, next) => {
+    next(ApiError.tooMany('Too many subscription attempts, please try again later'));
+  },
+});
+
 /** OTP resend limiter */
 export const otpRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute

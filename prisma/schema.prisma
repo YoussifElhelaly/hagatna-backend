@@ -298,6 +298,9 @@ model Product {
   price              Decimal       @db.Decimal(12, 2)
   comparePrice       Decimal?      @db.Decimal(12, 2)
   costPrice          Decimal?      @db.Decimal(12, 2)
+  dealEndsAt         DateTime?                    // end time for a time-limited deal (drives storefront countdown)
+  brandId            String?
+  brand              Brand?         @relation(fields: [brandId], references: [id])
   shippingClassId    String?
   shippingClass      ShippingClass? @relation(fields: [shippingClassId], references: [id])
   sku                String?       @unique @db.VarChar(100)
@@ -326,6 +329,7 @@ model Product {
   @@index([status])
   @@index([isFeatured])
   @@index([deletedAt])
+  @@index([brandId])
   @@map("products")
 }
 
@@ -1122,4 +1126,49 @@ model Banner {
 
   @@index([isActive, order])
   @@map("banners")
+}
+
+// ═══════════════════════════════════════════════════════
+//  BRANDS
+// ═══════════════════════════════════════════════════════
+
+model Brand {
+  id        String    @id @default(uuid())
+  name      String    @db.VarChar(150)
+  slug      String    @unique @db.VarChar(150)
+  logo      String?   @db.Text
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  products  Product[]
+
+  @@index([isActive])
+  @@map("brands")
+}
+
+// ═══════════════════════════════════════════════════════
+//  NEWSLETTER
+// ═══════════════════════════════════════════════════════
+
+model NewsletterSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  @@map("newsletter_subscribers")
+}
+
+// ═══════════════════════════════════════════════════════
+//  SITE SETTINGS (key/value — storefront feature toggles)
+// ═══════════════════════════════════════════════════════
+
+model Setting {
+  key       String   @id @db.VarChar(100)
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
 }

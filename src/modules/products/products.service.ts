@@ -26,6 +26,11 @@ const productBaseSelect = {
   slug: true,
   price: true,
   comparePrice: true,
+  dealEndsAt: true,
+  brandId: true,
+  brand: {
+    select: { id: true, name: true, slug: true, logo: true },
+  },
   shippingClassId: true,
   shippingClass: {
     select: { id: true, name: true, baseCost: true, extraUnitCost: true, maxCost: true },
@@ -153,8 +158,8 @@ const invalidateProductCache = async (slug: string) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const listProducts = async (query: ProductsListQuery, userId?: string) => {
   const {
-    page = 1, limit = 20, categoryId, vendorId,
-    minPrice, maxPrice, search, tag, isFeatured, sort = 'newest',
+    page = 1, limit = 20, categoryId, vendorId, brand,
+    minPrice, maxPrice, search, tag, isFeatured, onSale, sort = 'newest',
     attrs,
   } = query;
   const skip = (page - 1) * limit;
@@ -164,6 +169,17 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
   if (categoryId) {
     const descendants = await getDescendantIds(categoryId);
     categoryIds = [categoryId, ...descendants];
+  }
+
+  // Resolve brand filter (accepts either a brand id or slug) to a brandId.
+  // Sentinel keeps the result set empty when the brand doesn't exist.
+  let brandId: string | undefined;
+  if (brand) {
+    const matched = await prisma.brand.findFirst({
+      where: { OR: [{ id: brand }, { slug: brand }] },
+      select: { id: true },
+    });
+    brandId = matched?.id ?? '__no_match__';
   }
 
   // Build one AND condition per attribute filter so a product must satisfy ALL
@@ -184,7 +200,10 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     deletedAt: null,
     ...(categoryIds && { categoryId: { in: categoryIds } }),
     ...(vendorId && { vendorId }),
+    ...(brandId && { brandId }),
     ...(isFeatured !== undefined && { isFeatured }),
+    // onSale: only products whose comparePrice is set AND greater than price
+    ...(onSale && { comparePrice: { gt: prisma.product.fields.price } }),
     ...(minPrice !== undefined || maxPrice !== undefined
       ? {
           price: {
