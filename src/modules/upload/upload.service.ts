@@ -10,6 +10,7 @@ export type UploadFolder =
   | 'products'
   | 'vendors/logos'
   | 'vendors/banners'
+  | 'banners'
   | 'categories'
   | 'reviews'
   | 'documents'
