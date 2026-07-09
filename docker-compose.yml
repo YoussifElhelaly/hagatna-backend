@@ -64,6 +64,7 @@ services:
         condition: service_healthy
     volumes:
       - backend_logs:/app/logs
+      - backend_uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
       interval: 30s
@@ -125,6 +126,8 @@ volumes:
     name: hagatna_redis_data
   backend_logs:
     name: hagatna_backend_logs
+  backend_uploads:
+    name: hagatna_backend_uploads
   db_backups:
     name: hagatna_db_backups
 
