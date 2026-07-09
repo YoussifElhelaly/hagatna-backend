@@ -31,6 +31,8 @@ export const RedisKeys = {
     product: (slug: string) => `cache:product:${slug}`,
     featuredProducts: () => 'cache:products:featured',
     attributeDefinitions: (categoryId: string) => `cache:attrs:${categoryId}`,
+    storefrontStats: () => 'cache:stats',
+    brands: () => 'cache:brands',
   },
 };
 
@@ -41,4 +43,6 @@ export const TTL = {
   CATEGORIES: 3600,     // 1 hour
   PRODUCT: 900,         // 15 minutes
   FEATURED: 600,        // 10 minutes
+  STATS: 300,           // 5 minutes
+  BRANDS: 3600,         // 1 hour
 };

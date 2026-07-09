@@ -40,6 +40,8 @@ export interface CreateProductInput {
   price: number;
   comparePrice?: number;
   costPrice?: number;
+  dealEndsAt?: Date | null;
+  brandId?: string | null;
   shippingClassId?: string;
   sku?: string;
   stockQuantity?: number;
@@ -57,6 +59,8 @@ export interface UpdateProductInput {
   price?: number;
   comparePrice?: number;
   costPrice?: number;
+  dealEndsAt?: Date | null;
+  brandId?: string | null;
   shippingClassId?: string | null;
   sku?: string;
   stockQuantity?: number;
@@ -76,11 +80,13 @@ export interface ProductsListQuery {
   limit?: number;
   categoryId?: string;
   vendorId?: string;
+  brand?: string;      // brand slug or id
   minPrice?: number;
   maxPrice?: number;
   search?: string;
   tag?: string;
   isFeatured?: boolean;
+  onSale?: boolean;
   sort?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
   // Dynamic attribute filters e.g. { ram: "8GB", color: "Black" }
   attrs?: Record<string, string>;

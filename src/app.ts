@@ -50,6 +50,10 @@ import contactRoutes from '@modules/contact/contact.routes';
 import legalRoutes from '@modules/legal/legal.routes';
 import bannerRoutes from '@modules/banners/banners.routes';
 import testEmailRoutes from '@modules/test-email/test-email.routes';
+import newsletterRoutes from '@modules/newsletter/newsletter.routes';
+import siteSettingsRoutes from '@modules/site-settings/site-settings.routes';
+import statsRoutes from '@modules/stats/stats.routes';
+import brandRoutes from '@modules/brands/brands.routes';
 
 // ─── Passport Config ─────────────────────────────────────────────────────────
 import '@config/passport';
@@ -159,6 +163,10 @@ app.use(`${API_PREFIX}/contact`, contactRoutes);
 app.use(`${API_PREFIX}/legal`, legalRoutes);
 app.use(`${API_PREFIX}/banners`, bannerRoutes);
 app.use(`${API_PREFIX}/test-email`, testEmailRoutes);
+app.use(`${API_PREFIX}/newsletter`, newsletterRoutes);
+app.use(`${API_PREFIX}/settings`, siteSettingsRoutes);
+app.use(`${API_PREFIX}/stats`, statsRoutes);
+app.use(`${API_PREFIX}/brands`, brandRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, _res, next) => {
