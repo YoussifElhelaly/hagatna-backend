@@ -5,16 +5,22 @@ import sharp from 'sharp';
 import { ApiError } from '@shared/utils/ApiError';
 
 // ─── Folder map ───────────────────────────────────────────────────────────────
-export type UploadFolder =
-  | 'avatars'
-  | 'products'
-  | 'vendors/logos'
-  | 'vendors/banners'
-  | 'banners'
-  | 'categories'
-  | 'reviews'
-  | 'documents'
-  | 'payouts';
+export const UPLOAD_FOLDERS = [
+  'avatars',
+  'products',
+  'vendors/logos',
+  'vendors/banners',
+  'banners',
+  'categories',
+  'reviews',
+  'documents',
+  'payouts',
+] as const;
+
+export type UploadFolder = (typeof UPLOAD_FOLDERS)[number];
+
+export const isUploadFolder = (v: unknown): v is UploadFolder =>
+  typeof v === 'string' && (UPLOAD_FOLDERS as readonly string[]).includes(v);
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
@@ -50,6 +56,11 @@ export const uploadSingle = async (
 
   if (!isImage && !isPdf) {
     throw new ApiError(400, `Unsupported file type: ${file.mimetype}`);
+  }
+
+  // Callers may pass a folder sourced from request input — never let it escape UPLOAD_DIR.
+  if (!isUploadFolder(folder)) {
+    throw new ApiError(400, `Invalid folder. Allowed: ${UPLOAD_FOLDERS.join(', ')}`);
   }
 
   const dir = path.join(UPLOAD_DIR, folder);
@@ -92,7 +103,11 @@ export const deleteFile = async (
   publicId: string,
   _resourceType: 'image' | 'raw' = 'image',
 ): Promise<void> => {
-  const filePath = path.join(UPLOAD_DIR, publicId);
+  const root = path.resolve(UPLOAD_DIR);
+  const filePath = path.resolve(root, publicId);
+  if (filePath !== root && !filePath.startsWith(root + path.sep)) {
+    throw new ApiError(400, 'Invalid publicId');
+  }
   try {
     await fs.unlink(filePath);
   } catch (err: any) {

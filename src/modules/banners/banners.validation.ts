@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { imageUrlSchema } from '@shared/validation/imageUrl';
 
 const LocalizedStringSchema = z.object({
   en: z.string().min(1, 'English text is required'),
@@ -23,7 +24,7 @@ const LinkUrlSchema = z
 export const CreateBannerSchema = z.object({
   title: LocalizedStringSchema,
   description: OptionalLocalizedStringSchema.optional(),
-  imageUrl: z.string().url('Invalid image URL'),
+  imageUrl: imageUrlSchema(),
   imagePublicId: z.string().optional().default(''),
   linkUrl: LinkUrlSchema.optional().nullable(),
   order: z.number().int().min(0).optional().default(0),
@@ -39,7 +40,7 @@ export const UpdateBannerSchema = z.object({
 export const UpdateBannerBodySchema = z.object({
   title: LocalizedStringSchema.optional(),
   description: OptionalLocalizedStringSchema.optional(),
-  imageUrl: z.string().url('Invalid image URL').optional(),
+  imageUrl: imageUrlSchema().optional(),
   imagePublicId: z.string().min(1).optional(),
   linkUrl: LinkUrlSchema.optional().nullable(),
   order: z.number().int().min(0).optional(),

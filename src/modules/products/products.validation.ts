@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ProductStatus } from '@prisma/client';
+import { imageUrlSchema } from '@shared/validation/imageUrl';
 
 // ─── Reusable ─────────────────────────────────────────────────────────────────
 const localizedStringSchema = z.object({
@@ -27,7 +28,7 @@ const ProductVariantSchema = z.object({
   comparePrice: positiveDecimal.optional(),
   sku: z.string().max(100).optional(),
   stockQuantity: z.number().int().min(0).optional().default(0),
-  imageUrl: z.string().url('Invalid image URL').optional(),
+  imageUrl: imageUrlSchema().optional(),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -42,7 +43,7 @@ export const UpdateVariantSchema = z
     comparePrice: positiveDecimal.nullable().optional(),
     sku: z.string().max(100).nullable().optional(),
     stockQuantity: z.number().int().min(0).optional(),
-    imageUrl: z.string().url('Invalid image URL').nullable().optional(),
+    imageUrl: imageUrlSchema().nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -51,7 +52,7 @@ export const UpdateVariantSchema = z
 
 // ─── Image ────────────────────────────────────────────────────────────────────
 const ProductImageSchema = z.object({
-  url: z.string().url('Invalid image URL'),
+  url: imageUrlSchema(),
   altText: z.string().max(255).optional(),
   isPrimary: z.boolean().optional().default(false),
   sortOrder: z.number().int().min(0).optional().default(0),
@@ -149,8 +150,8 @@ export const AdminCreateProductSchema = z.object({
   sku: z.string().max(100).optional(),
   stockQuantity: z.number().int().min(0).optional().default(0),
   lowStockThreshold: z.number().int().min(0).optional().default(5),
-  variants: z.array(z.any()).optional().default([]),
-  images: z.array(z.any()).optional().default([]),
+  variants: z.array(ProductVariantSchema).optional().default([]),
+  images: z.array(ProductImageSchema).max(10).optional().default([]),
   tags: z.array(z.string().min(1).max(50)).max(20).optional().default([]),
 }).refine(
   (data) => !data.comparePrice || data.comparePrice > data.price,
@@ -174,12 +175,7 @@ export const AdminUpdateProductSchema = z
     lowStockThreshold: z.number().int().min(0).optional(),
     tags: z.array(z.string().min(1).max(50)).max(20).optional(),
     status: z.nativeEnum(ProductStatus).optional(),
-    images: z.array(z.object({
-      url: z.string().url('Invalid image URL'),
-      altText: z.string().max(255).optional(),
-      isPrimary: z.boolean().optional().default(false),
-      sortOrder: z.number().int().min(0).optional().default(0),
-    })).max(10).optional(),
+    images: z.array(ProductImageSchema).max(10).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',

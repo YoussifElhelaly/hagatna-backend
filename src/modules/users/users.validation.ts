@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Role } from '@prisma/client';
+import { imageUrlSchema } from '@shared/validation/imageUrl';
 
 const passwordSchema = z
   .string()
@@ -16,7 +17,7 @@ export const UpdateProfileSchema = z.object({
     .string()
     .regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number')
     .optional(),
-  avatar: z.string().url('Invalid avatar URL').optional(),
+  avatar: imageUrlSchema('Invalid avatar URL').optional(),
 });
 
 export const ChangePasswordSchema = z.object({

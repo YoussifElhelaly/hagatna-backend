@@ -4,6 +4,14 @@ import { ApiError } from '@shared/utils/ApiError';
 import { logger } from '@shared/utils/logger';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
+
+const MULTER_MESSAGES: Record<string, string> = {
+  LIMIT_FILE_SIZE: 'File is too large. Images must be under 5 MB, documents under 10 MB',
+  LIMIT_FILE_COUNT: 'Too many files uploaded',
+  LIMIT_UNEXPECTED_FILE: 'Unexpected file field',
+  LIMIT_PART_COUNT: 'Too many parts in the upload',
+};
 
 export const errorHandler = (
   err: Error,
@@ -24,6 +32,17 @@ export const errorHandler = (
       success: false,
       message: 'Validation failed',
       errors,
+    });
+    return;
+  }
+
+  // ─── Multer Upload Errors ──────────────────────────────────────────────────
+  if (err instanceof MulterError) {
+    const message = MULTER_MESSAGES[err.code] ?? `Upload error: ${err.message}`;
+    res.status(400).json({
+      success: false,
+      message,
+      ...(err.field && { errors: [{ field: err.field, message }] }),
     });
     return;
   }
