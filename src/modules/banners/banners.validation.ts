@@ -20,10 +20,20 @@ const LinkUrlSchema = z
     { message: 'Link must be a valid URL or a relative path starting with /' }
   );
 
+// Image URL may be an absolute URL or a relative upload path like
+// "/uploads/banners/xyz.webp" returned by the upload endpoint.
+const ImageUrlSchema = z
+  .string()
+  .max(2048)
+  .refine(
+    (v) => v.startsWith('/') || z.string().url().safeParse(v).success,
+    { message: 'Invalid image URL' }
+  );
+
 export const CreateBannerSchema = z.object({
   title: LocalizedStringSchema,
   description: OptionalLocalizedStringSchema.optional(),
-  imageUrl: z.string().url('Invalid image URL'),
+  imageUrl: ImageUrlSchema,
   imagePublicId: z.string().optional().default(''),
   linkUrl: LinkUrlSchema.optional().nullable(),
   order: z.number().int().min(0).optional().default(0),
@@ -39,7 +49,7 @@ export const UpdateBannerSchema = z.object({
 export const UpdateBannerBodySchema = z.object({
   title: LocalizedStringSchema.optional(),
   description: OptionalLocalizedStringSchema.optional(),
-  imageUrl: z.string().url('Invalid image URL').optional(),
+  imageUrl: ImageUrlSchema.optional(),
   imagePublicId: z.string().min(1).optional(),
   linkUrl: LinkUrlSchema.optional().nullable(),
   order: z.number().int().min(0).optional(),
