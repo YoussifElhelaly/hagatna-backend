@@ -448,6 +448,7 @@ model Address {
   phone         String  @db.VarChar(20)
   street        String  @db.Text
   city          String  @db.VarChar(100)
+  governorate   String? @db.VarChar(100)           // EG governorate code — drives shipping zone matching
   country       String  @db.VarChar(100)
   zipCode       String?   @db.VarChar(20)
   isDefault     Boolean   @default(false)
@@ -664,8 +665,12 @@ model ShippingClass {
 model ShippingZone {
   id        String           @id @default(uuid())
   name      String           @db.VarChar(100)
-  countries Json                                     // string[] of country codes
-  regions   Json?                                    // string[] of region codes
+  // Deprecated: the platform ships within Egypt only, so zones match on
+  // governorate. Kept so existing rows keep validating.
+  countries Json             @default("[\"EG\"]")
+  // string[] of governorate codes (see shared/constants/governorates.ts).
+  // Stored in the legacy "regions" column.
+  governorates Json?         @map("regions")
   isActive  Boolean           @default(true)
   deletedAt DateTime?                            // soft delete
   createdAt DateTime          @default(now())

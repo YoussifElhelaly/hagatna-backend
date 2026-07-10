@@ -3,6 +3,7 @@ import { prisma } from '@database/prisma/client';
 import { ApiError } from '@shared/utils/ApiError';
 import { buildPaginationMeta } from '@shared/utils/ApiResponse';
 import { isValidTransition } from '@shared/constants/orderStatus';
+import { assertMethodServesGovernorate, priceMethod } from '@modules/shipping/shipping.service';
 import { notify } from '@modules/notifications/notifications.service';
 import { earnPoints, redeemPoints, getRedeemableCategoryIds } from '@modules/loyalty/loyalty.service';
 import {
@@ -151,27 +152,71 @@ const validateCoupon = async (
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// placeOrder  —  creates one Order per vendor in a single transaction
+// Class-based product shipping: group a vendor's items by shipping class, then
+// cost per class = baseCost + (units − 1) × extraUnitCost, capped at maxCost.
 // ─────────────────────────────────────────────────────────────────────────────
-export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
-  const { addressId, shippingAddress: inlineAddress, paymentMethod, couponCode, notes, pointsToRedeem, shippingMethodId } = input;
+type ShippingClassLike = {
+  id: string; baseCost: unknown; extraUnitCost: unknown; maxCost: unknown; isActive: boolean;
+};
+
+const calcClassShipping = (
+  items: { quantity: number; product: { shippingClass?: ShippingClassLike | null } }[],
+): number => {
+  const groups = new Map<string, { baseCost: number; extraUnitCost: number; maxCost: number | null; units: number }>();
+  for (const item of items) {
+    const cls = item.product.shippingClass;
+    if (!cls || !cls.isActive) continue;
+    const entry = groups.get(cls.id) ?? {
+      baseCost: Number(cls.baseCost),
+      extraUnitCost: Number(cls.extraUnitCost),
+      maxCost: cls.maxCost != null ? Number(cls.maxCost) : null,
+      units: 0,
+    };
+    entry.units += item.quantity;
+    groups.set(cls.id, entry);
+  }
+  let total = 0;
+  for (const g of groups.values()) {
+    let cost = g.baseCost + Math.max(0, g.units - 1) * g.extraUnitCost;
+    if (g.maxCost != null) cost = Math.min(cost, g.maxCost);
+    total += cost;
+  }
+  return Number(total.toFixed(2));
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// buildOrderPlan  —  validates the cart and prices the whole order. Writes nothing.
+//
+// placeOrder and quoteOrder both go through this, so the total shown at
+// checkout is by construction the total that gets charged.
+// ─────────────────────────────────────────────────────────────────────────────
+export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => {
+  const { addressId, shippingAddress: inlineAddress, couponCode, pointsToRedeem, shippingMethodId } = input;
 
   // ── 1. Resolve shipping address ───────────────────────────────────────────
-  let shippingAddressSnapshot: object;
+  let shippingAddressSnapshot: {
+    recipientName: string; phone: string; street: string; city: string;
+    governorate: string; country: string; zipCode?: string | null;
+  };
   if (addressId) {
     const saved = await prisma.address.findUnique({ where: { id: addressId } });
     if (!saved || saved.userId !== userId) throw ApiError.notFound('Address not found');
+    if (!saved.governorate) {
+      throw ApiError.badRequest('This saved address has no governorate. Please edit it before checking out.');
+    }
     shippingAddressSnapshot = {
       recipientName: saved.recipientName,
       phone: saved.phone,
       street: saved.street,
       city: saved.city,
+      governorate: saved.governorate,
       country: saved.country,
       zipCode: saved.zipCode,
     };
   } else {
     shippingAddressSnapshot = inlineAddress!;
   }
+  const governorate = shippingAddressSnapshot.governorate;
 
   // ── 2. Fetch & validate cart ──────────────────────────────────────────────
   const cart = await prisma.cart.findUnique({
@@ -291,27 +336,17 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
   }
 
   // ── 6.5. Resolve shipping method & fee ────────────────────────────────────
-  let totalShippingFee = 0;
-  if (shippingMethodId) {
-    const method = await prisma.shippingMethod.findFirst({
-      where: { id: shippingMethodId, isActive: true, deletedAt: null },
-    });
-    if (!method) throw ApiError.notFound('Shipping method not found or inactive');
-    if (method.isFree) {
-      totalShippingFee = 0;
-    } else if (method.minOrderForFree && totalSubtotal >= Number(method.minOrderForFree)) {
-      totalShippingFee = 0;
-    } else {
-      totalShippingFee = Number(method.price);
-    }
-  }
+  // The method must serve the address's governorate, otherwise a customer could
+  // pick a cheap method from a zone that does not deliver to them.
+  const method = await assertMethodServesGovernorate(
+    shippingMethodId,
+    governorate,
+    [...vendorGroups.keys()],
+  );
+  const totalShippingFee = priceMethod(method, totalSubtotal);
 
-  // ── 7. Transaction — one order per vendor ─────────────────────────────────
-  const createdOrders = await prisma.$transaction(async (tx) => {
-    const orders: { id: string; orderNumber: string }[] = [];
-    let isFirstVendor = true;
-
-    for (const [, items] of vendorGroups) {
+  // ── 7. Per-vendor financials ──────────────────────────────────────────────
+  const vendorPlans = [...vendorGroups.entries()].map(([vendorId, items]) => {
       // Per-vendor proportional financials
       const vendorSubtotal = items.reduce(
         (sum, item) => sum + Number(item.priceSnapshot) * item.quantity,
@@ -345,32 +380,105 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
       const pointsRatio = totalEligibleSubtotal > 0 ? vendorEligibleSubtotal / totalEligibleSubtotal : 0;
       const vendorPointsDiscount = Number((totalPointsDiscount * pointsRatio).toFixed(2));
       const vendorRedeemedPoints = Math.round(totalRedeemedPoints * pointsRatio);
-      // Class-based product shipping: group this vendor's items by shipping class;
-      // cost per class = baseCost + (units − 1) × extraUnitCost, capped at maxCost.
-      // The shipping-method fee (e.g. express surcharge) is split proportionally on top.
-      const classGroups = new Map<string, { baseCost: number; extraUnitCost: number; maxCost: number | null; units: number }>();
-      for (const item of items) {
-        const cls = (item.product as any).shippingClass;
-        if (!cls || !cls.isActive) continue;
-        const entry = classGroups.get(cls.id) ?? {
-          baseCost: Number(cls.baseCost),
-          extraUnitCost: Number(cls.extraUnitCost),
-          maxCost: cls.maxCost != null ? Number(cls.maxCost) : null,
-          units: 0,
-        };
-        entry.units += item.quantity;
-        classGroups.set(cls.id, entry);
-      }
-      let vendorProductShipping = 0;
-      for (const g of classGroups.values()) {
-        let cost = g.baseCost + Math.max(0, g.units - 1) * g.extraUnitCost;
-        if (g.maxCost != null) cost = Math.min(cost, g.maxCost);
-        vendorProductShipping += cost;
-      }
-      const vendorShippingFee = Number((totalShippingFee * vendorRatio + vendorProductShipping).toFixed(2));
+
+      // The shipping-method fee (e.g. express surcharge) is split proportionally
+      // on top of this vendor's class-based product shipping.
+      const vendorProductShipping = calcClassShipping(items);
+      const vendorMethodFee = Number((totalShippingFee * vendorRatio).toFixed(2));
+      const vendorShippingFee = Number((vendorMethodFee + vendorProductShipping).toFixed(2));
       const vendorFinalTotal = Number(
         Math.max(0, vendorSubtotal - vendorDiscountAmount - vendorPointsDiscount + vendorShippingFee).toFixed(2)
       );
+
+      return {
+        vendorId,
+        items,
+        subtotal: vendorSubtotal,
+        discountAmount: vendorDiscountAmount,
+        pointsDiscount: vendorPointsDiscount,
+        redeemedPoints: vendorRedeemedPoints,
+        methodFee: vendorMethodFee,
+        productShipping: vendorProductShipping,
+        shippingFee: vendorShippingFee,
+        total: vendorFinalTotal,
+      };
+  });
+
+  return {
+    cart,
+    shippingAddressSnapshot,
+    governorate,
+    method,
+    vendorPlans,
+    promotionId,
+    totalSubtotal,
+    totalDiscountAmount,
+    totalPointsDiscount,
+    totalRedeemedPoints,
+    totalMethodFee: totalShippingFee,
+    totalProductShipping: vendorPlans.reduce((s, v) => s + v.productShipping, 0),
+    totalShipping: vendorPlans.reduce((s, v) => s + v.shippingFee, 0),
+    grandTotal: vendorPlans.reduce((s, v) => s + v.total, 0),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// quoteOrder  —  the exact numbers placeOrder will charge. No writes.
+// ─────────────────────────────────────────────────────────────────────────────
+export const quoteOrder = async (userId: string, input: PlaceOrderInput) => {
+  const plan = await buildOrderPlan(userId, input);
+  return {
+    subtotal:        Number(plan.totalSubtotal.toFixed(2)),
+    discountAmount:  Number(plan.totalDiscountAmount.toFixed(2)),
+    pointsDiscount:  Number(plan.totalPointsDiscount.toFixed(2)),
+    pointsRedeemed:  plan.totalRedeemedPoints,
+    shippingMethodFee:  Number(plan.totalMethodFee.toFixed(2)),
+    productShippingFee: Number(plan.totalProductShipping.toFixed(2)),
+    shippingFee:     Number(plan.totalShipping.toFixed(2)),
+    total:           Number(plan.grandTotal.toFixed(2)),
+    orderCount:      plan.vendorPlans.length,
+    shippingMethod: {
+      id: plan.method.id,
+      name: plan.method.name,
+      minDays: plan.method.minDays,
+      maxDays: plan.method.maxDays,
+    },
+    vendorBreakdown: plan.vendorPlans.map((v) => ({
+      vendorId:        v.vendorId,
+      subtotal:        Number(v.subtotal.toFixed(2)),
+      shippingFee:     v.shippingFee,
+      productShipping: v.productShipping,
+      methodFee:       v.methodFee,
+      total:           v.total,
+    })),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// placeOrder  —  creates one Order per vendor in a single transaction
+// ─────────────────────────────────────────────────────────────────────────────
+export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
+  const { paymentMethod, notes } = input;
+  const plan = await buildOrderPlan(userId, input);
+  const {
+    cart, shippingAddressSnapshot, vendorPlans, promotionId,
+    totalSubtotal, totalDiscountAmount, totalRedeemedPoints,
+  } = plan;
+
+  const createdOrders = await prisma.$transaction(async (tx) => {
+    const orders: { id: string; orderNumber: string }[] = [];
+    let isFirstVendor = true;
+
+    for (const vp of vendorPlans) {
+      const {
+        items,
+        subtotal:       vendorSubtotal,
+        discountAmount: vendorDiscountAmount,
+        pointsDiscount: vendorPointsDiscount,
+        redeemedPoints: vendorRedeemedPoints,
+        shippingFee:    vendorShippingFee,
+        total:          vendorFinalTotal,
+      } = vp;
 
       const orderNumber = await generateOrderNumber();
 

@@ -6,6 +6,8 @@ export interface InlineShippingAddress {
   phone: string;
   street: string;
   city: string;
+  /** ISO 3166-2:EG governorate code — decides which shipping zone applies */
+  governorate: string;
   country: string;
   zipCode?: string;
 }
@@ -22,7 +24,7 @@ export interface PlaceOrderInput {
   /** Number of loyalty points to redeem on this order */
   pointsToRedeem?: number;
   /** Shipping method chosen by customer at checkout */
-  shippingMethodId?: string;
+  shippingMethodId: string;
 }
 
 // ─── Admin — update overall order status ─────────────────────────────────────

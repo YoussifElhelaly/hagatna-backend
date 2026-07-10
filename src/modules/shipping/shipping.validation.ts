@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ShipmentStatus } from '@prisma/client';
+import { EG_GOVERNORATES, isGovernorateCode } from '@shared/constants/governorates';
 
 const localizedStringSchema = z.object({
   en: z.string().min(1, 'English value is required'),
@@ -10,27 +11,29 @@ const optionalLocalizedStringSchema = z
   .object({ en: z.string().min(1), ar: z.string().min(1) })
   .optional();
 
-const isoCountryCode = z
+const governorateCode = z
   .string()
-  .length(2, 'Must be a 2-letter ISO country code')
-  .toUpperCase();
+  .refine(isGovernorateCode, { message: 'Unknown Egyptian governorate code' });
+
+const governorateList = z
+  .array(governorateCode)
+  .min(1, 'At least one governorate is required')
+  .max(EG_GOVERNORATES.length)
+  .refine((list) => new Set(list).size === list.length, {
+    message: 'Governorates must not repeat',
+  });
 
 // ─── Shipping Zone ────────────────────────────────────────────────────────────
 export const CreateZoneSchema = z.object({
   name: z.string().min(2).max(100),
-  countries: z
-    .array(isoCountryCode)
-    .min(1, 'At least one country is required')
-    .max(250),
-  regions: z.array(z.string().min(1).max(100)).optional(),
+  governorates: governorateList,
   isActive: z.boolean().optional().default(true),
 });
 
 export const UpdateZoneSchema = z
   .object({
     name: z.string().min(2).max(100).optional(),
-    countries: z.array(isoCountryCode).min(1).max(250).optional(),
-    regions: z.array(z.string().min(1).max(100)).optional(),
+    governorates: governorateList.optional(),
     isActive: z.boolean().optional(),
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
@@ -115,7 +118,7 @@ export const OrderNumberParamSchema = z.object({
 
 // ─── Available methods query ──────────────────────────────────────────────────
 export const AvailableMethodsQuerySchema = z.object({
-  country: isoCountryCode,
+  governorate: governorateCode,
   orderSubtotal: z.coerce.number().positive().optional(),
 });
 

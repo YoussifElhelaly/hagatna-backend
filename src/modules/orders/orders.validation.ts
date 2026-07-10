@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { isGovernorateCode } from '@shared/constants/governorates';
 
 // ─── Inline shipping address ──────────────────────────────────────────────────
 const InlineShippingAddressSchema = z.object({
@@ -7,25 +8,41 @@ const InlineShippingAddressSchema = z.object({
   phone: z.string().min(7).max(20),
   street: z.string().min(5),
   city: z.string().min(2).max(100),
-  country: z.string().min(2).max(100),
+  governorate: z.string().refine(isGovernorateCode, 'Unknown Egyptian governorate'),
+  // The platform ships within Egypt only.
+  country: z.literal('EG').optional().default('EG'),
   zipCode: z.string().max(20).optional(),
 });
 
 // ─── Place Order ──────────────────────────────────────────────────────────────
+// shippingMethodId is required: without it the order would ship for free.
+const PlaceOrderFields = {
+  addressId: z.string().uuid('Invalid address ID').optional(),
+  shippingAddress: InlineShippingAddressSchema.optional(),
+  couponCode: z.string().max(50).optional(),
+  pointsToRedeem: z.number().int().positive().optional(),
+  shippingMethodId: z.string().uuid('Invalid shipping method ID'),
+};
+
+const hasAddress = (data: { addressId?: string; shippingAddress?: unknown }) =>
+  Boolean(data.addressId || data.shippingAddress);
+const addressMessage = { message: 'Either addressId or shippingAddress must be provided' };
+
 export const PlaceOrderSchema = z
   .object({
-    addressId: z.string().uuid('Invalid address ID').optional(),
-    shippingAddress: InlineShippingAddressSchema.optional(),
+    ...PlaceOrderFields,
     paymentMethod: z.nativeEnum(PaymentMethod),
-    couponCode: z.string().max(50).optional(),
     notes: z.string().max(500).optional(),
-    pointsToRedeem: z.number().int().positive().optional(),
-    shippingMethodId: z.string().uuid('Invalid shipping method ID').optional(),
   })
-  .refine(
-    (data) => data.addressId || data.shippingAddress,
-    { message: 'Either addressId or shippingAddress must be provided' }
-  );
+  .refine(hasAddress, addressMessage);
+
+// ─── Quote (dry-run pricing for the checkout screen) ──────────────────────────
+export const QuoteOrderSchema = z
+  .object({
+    ...PlaceOrderFields,
+    paymentMethod: z.nativeEnum(PaymentMethod).optional().default(PaymentMethod.cod),
+  })
+  .refine(hasAddress, addressMessage);
 
 // ─── Admin — update order status ──────────────────────────────────────────────
 export const UpdateOrderStatusSchema = z.object({

@@ -6,6 +6,7 @@ import { idempotency } from '@shared/middlewares/idempotency';
 import { ROLES } from '@shared/constants/roles';
 import {
   PlaceOrderSchema,
+  QuoteOrderSchema,
   UpdateOrderStatusSchema,
   UpdateItemStatusSchema,
   ReturnRequestSchema,
@@ -67,6 +68,9 @@ router.get('/admin/:orderNumber', authorize(ROLES.ADMIN), validate({ params: Ord
 router.patch('/admin/:orderNumber/status', authorize(ROLES.ADMIN), validate({ params: OrderNumberParamSchema, body: UpdateOrderStatusSchema }), OrdersController.updateOrderStatus);
 
 // ─── Customer ─────────────────────────────────────────────────────────────────
+
+// POST /api/v1/orders/quote  — dry-run pricing for the checkout screen
+router.post('/quote', authorize(ROLES.CUSTOMER, ROLES.VENDOR), validate({ body: QuoteOrderSchema }), OrdersController.quoteOrder);
 
 // POST /api/v1/orders
 router.post('/', authorize(ROLES.CUSTOMER, ROLES.VENDOR), validate({ body: PlaceOrderSchema }), idempotency, OrdersController.placeOrder);

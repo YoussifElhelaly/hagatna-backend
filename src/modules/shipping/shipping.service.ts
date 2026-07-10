@@ -2,6 +2,7 @@ import { ShipmentStatus } from '@prisma/client';
 import { prisma } from '@database/prisma/client';
 import { ApiError } from '@shared/utils/ApiError';
 import { buildPaginationMeta } from '@shared/utils/ApiResponse';
+import { EG_GOVERNORATES } from '@shared/constants/governorates';
 import type {
   CreateZoneInput,
   UpdateZoneInput,
@@ -154,40 +155,92 @@ export const deleteMethod = async (methodId: string) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// getAvailableCountries  —  public: all countries across active zones
+// getAvailableGovernorates  —  public: every governorate covered by a live zone
 // ─────────────────────────────────────────────────────────────────────────────
-export const getAvailableCountries = async () => {
+export const getAvailableGovernorates = async () => {
   const zones = await prisma.shippingZone.findMany({
     where: { isActive: true, deletedAt: null },
-    select: { countries: true },
+    select: { governorates: true },
   });
-  const countrySet = new Set<string>();
+  const covered = new Set<string>();
   for (const zone of zones) {
-    for (const c of zone.countries as string[]) {
-      countrySet.add(c.toUpperCase());
-    }
+    for (const g of (zone.governorates as string[] | null) ?? []) covered.add(g);
   }
-  return Array.from(countrySet).sort();
+  return EG_GOVERNORATES.filter((g) => covered.has(g.code));
+};
+
+/** The live zone serving a governorate, or null when nothing covers it. */
+export const findZoneForGovernorate = async (governorate: string) => {
+  const zones = await prisma.shippingZone.findMany({
+    where: { isActive: true, deletedAt: null },
+    select: { id: true, name: true, governorates: true },
+  });
+  return (
+    zones.find((z) => ((z.governorates as string[] | null) ?? []).includes(governorate)) ?? null
+  );
+};
+
+/**
+ * Confirms a shipping method serves the given governorate, and that any
+ * vendor-restricted method belongs to a vendor actually in the order.
+ * Returns the method so callers can price it.
+ */
+export const assertMethodServesGovernorate = async (
+  shippingMethodId: string,
+  governorate: string,
+  vendorIds: string[] = [],
+) => {
+  const method = await prisma.shippingMethod.findFirst({
+    where: { id: shippingMethodId, isActive: true, deletedAt: null },
+    include: { zone: { select: { id: true, name: true, governorates: true, isActive: true, deletedAt: true } } },
+  });
+  if (!method) throw ApiError.notFound('Shipping method not found or inactive');
+  if (!method.zone.isActive || method.zone.deletedAt) {
+    throw ApiError.badRequest('This shipping method is no longer available');
+  }
+  const covered = ((method.zone.governorates as string[] | null) ?? []).includes(governorate);
+  if (!covered) {
+    throw ApiError.badRequest(
+      `"${method.zone.name}" does not deliver to the selected governorate`,
+    );
+  }
+  if (method.vendorId && !vendorIds.includes(method.vendorId)) {
+    throw ApiError.badRequest('This shipping method is not available for the items in your order');
+  }
+  return method;
+};
+
+/** Price a method against an order subtotal, honouring free-shipping rules. */
+export const priceMethod = (
+  method: { price: unknown; isFree: boolean; minOrderForFree: unknown },
+  orderSubtotal: number,
+): number => {
+  if (method.isFree) return 0;
+  if (method.minOrderForFree && orderSubtotal >= Number(method.minOrderForFree)) return 0;
+  return Number(method.price);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // getAvailableMethods  —  public
 // ─────────────────────────────────────────────────────────────────────────────
 export const getAvailableMethods = async (query: AvailableMethodsQuery) => {
-  const { country, orderSubtotal = 0 } = query;
+  const { governorate, orderSubtotal = 0, vendorIds = [] } = query;
   const methods = await prisma.shippingMethod.findMany({
-    where: { isActive: true, deletedAt: null, zone: { isActive: true, deletedAt: null } },
-    include: { zone: { select: { id: true, name: true, countries: true } } },
+    where: {
+      isActive: true,
+      deletedAt: null,
+      zone: { isActive: true, deletedAt: null },
+      // Vendor-specific methods only surface for vendors in the cart.
+      OR: [{ vendorId: null }, ...(vendorIds.length ? [{ vendorId: { in: vendorIds } }] : [])],
+    },
+    include: { zone: { select: { id: true, name: true, governorates: true } } },
     orderBy: { price: 'asc' },
   });
-  const applicable = methods.filter((m) => {
-    const zoneCountries = m.zone.countries as string[];
-    return zoneCountries.includes(country.toUpperCase());
-  });
+  const applicable = methods.filter((m) =>
+    ((m.zone.governorates as string[] | null) ?? []).includes(governorate),
+  );
   return applicable.map((m) => {
-    let effectivePrice = Number(m.price);
-    if (m.isFree) effectivePrice = 0;
-    else if (m.minOrderForFree && orderSubtotal >= Number(m.minOrderForFree)) effectivePrice = 0;
+    const effectivePrice = priceMethod(m, orderSubtotal);
     return {
       id: m.id, name: m.name, minDays: m.minDays, maxDays: m.maxDays,
       originalPrice: Number(m.price), effectivePrice,
