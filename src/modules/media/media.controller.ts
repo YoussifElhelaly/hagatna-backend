@@ -3,7 +3,13 @@ import { asyncHandler } from '@shared/utils/asyncHandler';
 import { sendSuccess, sendCreated } from '@shared/utils/ApiResponse';
 import { ApiError } from '@shared/utils/ApiError';
 import * as MediaService from './media.service';
-import type { UploadFolder } from '@modules/upload/upload.service';
+import { isUploadFolder, UPLOAD_FOLDERS } from '@modules/upload/upload.service';
+
+// Folders reachable through the media library. `payouts` and `documents` are
+// written by their own flows and must not be targetable from here.
+const MEDIA_FOLDERS: readonly string[] = UPLOAD_FOLDERS.filter(
+  (f) => f !== 'payouts' && f !== 'documents',
+);
 
 // ─── GET /media ────────────────────────────────────────────────────────────────
 export const listAssets = asyncHandler(async (req: Request, res: Response) => {
@@ -19,8 +25,10 @@ export const listAssets = asyncHandler(async (req: Request, res: Response) => {
 export const uploadAsset = asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) throw new ApiError(400, 'Image file is required');
 
-  // Folder defaults to 'products' for vendors, 'media' (categories etc.) for admin
-  const folder = (req.body.folder as UploadFolder) || 'products';
+  const folder = (req.body.folder as string) || 'products';
+  if (!isUploadFolder(folder) || !MEDIA_FOLDERS.includes(folder)) {
+    throw new ApiError(400, `Invalid folder. Allowed: ${MEDIA_FOLDERS.join(', ')}`);
+  }
 
   const asset = await MediaService.uploadAsset(
     req.user!.id,

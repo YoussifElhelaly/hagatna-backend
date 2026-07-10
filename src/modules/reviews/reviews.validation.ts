@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ReviewStatus } from '@prisma/client';
+import { imageUrlSchema } from '@shared/validation/imageUrl';
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 export const CreateReviewSchema = z.object({
@@ -15,7 +16,7 @@ export const CreateReviewSchema = z.object({
   media: z
     .array(
       z.object({
-        url: z.string().url('Invalid media URL'),
+        url: imageUrlSchema('Invalid media URL'),
         type: z.enum(['image', 'video']),
       })
     )
