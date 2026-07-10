@@ -66,7 +66,7 @@ services:
       - backend_logs:/app/logs
       - backend_uploads:/app/uploads
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       start_period: 30s
