@@ -5,6 +5,13 @@ import { ROLES } from '@shared/constants/roles';
 import * as OrdersService from './orders.service';
 import { logActivity } from '@modules/activity-logs/activity-logs.service';
 
+// ─── POST /orders/quote  (customer) ───────────────────────────────────────────
+// Prices the cart exactly as placeOrder would, without creating anything.
+export const quoteOrder = asyncHandler(async (req: Request, res: Response) => {
+  const quote = await OrdersService.quoteOrder(req.user!.id, req.body);
+  sendSuccess({ res, message: 'Order quote calculated', data: quote });
+});
+
 // ─── POST /orders  (customer) ─────────────────────────────────────────────────
 export const placeOrder = asyncHandler(async (req: Request, res: Response) => {
   const orders = await OrdersService.placeOrder(req.user!.id, req.body);

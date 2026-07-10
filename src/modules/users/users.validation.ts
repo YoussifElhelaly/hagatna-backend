@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { imageUrlSchema } from '@shared/validation/imageUrl';
+import { isGovernorateCode } from '@shared/constants/governorates';
 
 const passwordSchema = z
   .string()
@@ -35,6 +36,7 @@ export const CreateAddressSchema = z.object({
   phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number'),
   street: z.string().min(5).max(255),
   city: z.string().min(2).max(100),
+  governorate: z.string().refine(isGovernorateCode, 'Unknown Egyptian governorate'),
   country: z.string().length(2, 'Country must be a 2-letter ISO code').toUpperCase(),
   zipCode: z.string().max(20).optional(),
   isDefault: z.boolean().optional().default(false),

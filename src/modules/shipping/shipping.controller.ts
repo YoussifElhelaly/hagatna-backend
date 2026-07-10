@@ -3,6 +3,7 @@ import { asyncHandler } from '@shared/utils/asyncHandler';
 import { sendSuccess, sendCreated } from '@shared/utils/ApiResponse';
 import { ROLES } from '@shared/constants/roles';
 import * as ShippingService from './shipping.service';
+import { EG_GOVERNORATES } from '@shared/constants/governorates';
 
 // ─── Zones ────────────────────────────────────────────────────────────────────
 
@@ -72,11 +73,18 @@ export const deleteMethod = asyncHandler(async (req: Request, res: Response) => 
   sendSuccess({ res, message: 'Shipping method removed', data: null });
 });
 
-// ─── Available countries (public) ────────────────────────────────────────────
+// ─── Governorates ────────────────────────────────────────────────────────────
 
-export const getAvailableCountries = asyncHandler(async (_req: Request, res: Response) => {
-  const countries = await ShippingService.getAvailableCountries();
-  sendSuccess({ res, message: 'Available countries retrieved', data: countries });
+// Public: only the governorates a live zone actually delivers to — checkout
+// must not offer an address we cannot ship to.
+export const getAvailableGovernorates = asyncHandler(async (_req: Request, res: Response) => {
+  const governorates = await ShippingService.getAvailableGovernorates();
+  sendSuccess({ res, message: 'Available governorates retrieved', data: governorates });
+});
+
+// Admin: the full catalogue, needed to compose zones.
+export const getGovernorateCatalog = asyncHandler(async (_req: Request, res: Response) => {
+  sendSuccess({ res, message: 'Governorate catalog retrieved', data: EG_GOVERNORATES });
 });
 
 // ─── Available methods (public) ───────────────────────────────────────────────

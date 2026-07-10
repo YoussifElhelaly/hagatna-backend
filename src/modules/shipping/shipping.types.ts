@@ -3,15 +3,13 @@ import { LocalizedString } from '@shared/types';
 // ─── Shipping Zone ────────────────────────────────────────────────────────────
 export interface CreateZoneInput {
   name: string;
-  countries: string[];   // ISO 3166-1 alpha-2 codes e.g. ["AE", "SA", "EG"]
-  regions?: string[];
+  governorates: string[];   // ISO 3166-2:EG codes e.g. ["C", "GZ", "ALX"]
   isActive?: boolean;
 }
 
 export interface UpdateZoneInput {
   name?: string;
-  countries?: string[];
-  regions?: string[];
+  governorates?: string[];
   isActive?: boolean;
 }
 
@@ -74,6 +72,7 @@ export interface UpdateShipmentInput {
 
 // ─── Available methods query ──────────────────────────────────────────────────
 export interface AvailableMethodsQuery {
-  country: string;
+  governorate: string;
   orderSubtotal?: number;
+  vendorIds?: string[];
 }

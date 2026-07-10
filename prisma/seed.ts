@@ -1094,24 +1094,38 @@ async function seedProducts(
 async function seedShipping() {
   console.log('🚚 Seeding shipping...');
 
-  const [localZone, usaZone, intlZone, egyptZone] = await Promise.all([
-    prisma.shippingZone.create({ data: { name: 'Guam Local', countries: ['GU'], isActive: true } }),
-    prisma.shippingZone.create({ data: { name: 'United States', countries: ['US'], isActive: true } }),
-    prisma.shippingZone.create({ data: { name: 'International', countries: ['AE', 'SA', 'KW', 'QA', 'BH', 'OM', 'JP', 'AU', 'GB'], isActive: true } }),
-    prisma.shippingZone.create({ data: { name: 'Egypt', countries: ['EG'], isActive: true } }),
+  // Zones group Egyptian governorates — the platform ships within Egypt only.
+  const [cairoZone, deltaZone, upperZone, remoteZone] = await Promise.all([
+    prisma.shippingZone.create({
+      data: { name: 'Greater Cairo', governorates: ['C', 'GZ', 'KB'], isActive: true },
+    }),
+    prisma.shippingZone.create({
+      data: {
+        name: 'Delta & Canal',
+        governorates: ['ALX', 'BH', 'DK', 'GH', 'KFS', 'MNF', 'SHR', 'DT', 'PTS', 'IS', 'SUZ'],
+        isActive: true,
+      },
+    }),
+    prisma.shippingZone.create({
+      data: {
+        name: 'Upper Egypt',
+        governorates: ['FYM', 'BNS', 'MN', 'AST', 'SHG', 'QNA', 'LX', 'ASN'],
+        isActive: true,
+      },
+    }),
+    prisma.shippingZone.create({
+      data: { name: 'Remote Areas', governorates: ['BA', 'SIN', 'SIN_N', 'MT', 'WAD'], isActive: true },
+    }),
   ]);
 
+  // Standard = 0 (product shipping-class costs still apply); express adds a surcharge.
   await Promise.all([
-    prisma.shippingMethod.create({ data: { zoneId: localZone.id, name: { en: 'Same-Day Delivery', ar: 'توصيل في نفس اليوم' }, minDays: 0, maxDays: 1, price: dec(9.99), isFree: false, isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: localZone.id, name: { en: 'Standard Local Delivery', ar: 'التوصيل المحلي العادي' }, minDays: 1, maxDays: 3, price: dec(4.99), isFree: false, minOrderForFree: dec(75.00), isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: localZone.id, name: { en: 'Store Pickup', ar: 'الاستلام من المتجر' }, minDays: 0, maxDays: 0, price: dec(0.00), isFree: true, isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: usaZone.id, name: { en: 'USPS Priority Mail', ar: 'البريد الأولوي USPS' }, minDays: 2, maxDays: 5, price: dec(19.99), isFree: false, minOrderForFree: dec(150.00), isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: usaZone.id, name: { en: 'FedEx Express', ar: 'فيدإكس إكسبريس' }, minDays: 1, maxDays: 3, price: dec(34.99), isFree: false, isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: intlZone.id, name: { en: 'International Standard', ar: 'الشحن الدولي العادي' }, minDays: 7, maxDays: 14, price: dec(29.99), isFree: false, isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: intlZone.id, name: { en: 'International Express', ar: 'الشحن الدولي السريع' }, minDays: 3, maxDays: 7, price: dec(59.99), isFree: false, isActive: true } }),
-    // Egypt: regular = 0 (product shipping-class costs apply), express = surcharge on top
-    prisma.shippingMethod.create({ data: { zoneId: egyptZone.id, name: { en: 'Standard Delivery', ar: 'توصيل عادي' }, minDays: 2, maxDays: 5, price: dec(0.00), isFree: false, isActive: true } }),
-    prisma.shippingMethod.create({ data: { zoneId: egyptZone.id, name: { en: 'Express Delivery', ar: 'توصيل سريع' }, minDays: 1, maxDays: 2, price: dec(100.00), isFree: false, isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: cairoZone.id, name: { en: 'Standard Delivery', ar: 'توصيل عادي' }, minDays: 1, maxDays: 3, price: dec(0.00), isFree: false, isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: cairoZone.id, name: { en: 'Express Delivery', ar: 'توصيل سريع' }, minDays: 0, maxDays: 1, price: dec(100.00), isFree: false, isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: deltaZone.id, name: { en: 'Standard Delivery', ar: 'توصيل عادي' }, minDays: 2, maxDays: 5, price: dec(0.00), isFree: false, isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: deltaZone.id, name: { en: 'Express Delivery', ar: 'توصيل سريع' }, minDays: 1, maxDays: 2, price: dec(120.00), isFree: false, isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: upperZone.id, name: { en: 'Standard Delivery', ar: 'توصيل عادي' }, minDays: 3, maxDays: 6, price: dec(50.00), isFree: false, minOrderForFree: dec(2000.00), isActive: true } }),
+    prisma.shippingMethod.create({ data: { zoneId: remoteZone.id, name: { en: 'Standard Delivery', ar: 'توصيل عادي' }, minDays: 5, maxDays: 10, price: dec(150.00), isFree: false, isActive: true } }),
   ]);
 
   console.log(`   ✓ 4 shipping zones + 9 methods`);

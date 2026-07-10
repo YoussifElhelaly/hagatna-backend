@@ -22,7 +22,8 @@ import * as ShippingController from './shipping.controller';
 const router = Router();
 
 // ─── Public ───────────────────────────────────────────────────────────────────
-router.get('/countries', ShippingController.getAvailableCountries);
+router.get('/governorates', ShippingController.getAvailableGovernorates);
+router.get('/governorates/catalog', authenticate, authorize(ROLES.ADMIN), ShippingController.getGovernorateCatalog);
 router.get('/methods/available', validate({ query: AvailableMethodsQuerySchema }), ShippingController.getAvailableMethods);
 
 // ─── Admin — Zone Management ──────────────────────────────────────────────────
