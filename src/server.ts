@@ -6,6 +6,7 @@ import { prisma } from '@database/prisma/client';
 import { redis } from '@database/redis/client';
 import { initSocket } from '@socket/index';
 import { logger } from '@shared/utils/logger';
+import { verifyEmailTransport } from '@shared/utils/email';
 import { isPaymobEnabled } from '@modules/payments/payments.routes';
 
 const httpServer = createServer(app);
@@ -23,6 +24,9 @@ const start = async (): Promise<void> => {
     // Test Redis connection
     await redis.ping();
     logger.info('✅ Redis connected');
+
+    // Verify SMTP transport (non-blocking — logs a warning if misconfigured)
+    void verifyEmailTransport();
 
     httpServer.listen(env.PORT, () => {
       logger.info(`🚀 Server running on port ${env.PORT} [${env.NODE_ENV}]`);
