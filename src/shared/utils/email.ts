@@ -13,6 +13,23 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ─── Startup Verification ─────────────────────────────────────────────────────
+// Confirms the SMTP host is reachable and the credentials authenticate.
+// Non-blocking: logs a clear warning on failure instead of throwing, so a
+// misconfigured mailer is visible in the logs rather than silently swallowed
+// later inside send().
+export const verifyEmailTransport = async (): Promise<void> => {
+  try {
+    await transporter.verify();
+    logger.info(`✅ SMTP ready (${env.SMTP_HOST}:${env.SMTP_PORT} as ${env.SMTP_USER})`);
+  } catch (error) {
+    logger.error(
+      `⚠️  SMTP verification FAILED (${env.SMTP_HOST}:${env.SMTP_PORT} as ${env.SMTP_USER}) — outgoing emails (OTP, password reset, notifications) will not be delivered:`,
+      error,
+    );
+  }
+};
+
 // ─── HTML Escaping ────────────────────────────────────────────────────────────
 const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
