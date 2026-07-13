@@ -25,6 +25,19 @@ export const CreateReviewSchema = z.object({
     .default([]),
 });
 
+// ─── Admin authored (testimonial) ─────────────────────────────────────────────
+export const AdminCreateReviewSchema = z.object({
+  productId: z.string().uuid('Invalid product ID'),
+  authorName: z.string().trim().min(2, 'Author name is required').max(100),
+  rating: z
+    .number()
+    .int('Rating must be a whole number')
+    .min(1, 'Minimum rating is 1')
+    .max(5, 'Maximum rating is 5'),
+  title: z.string().min(3).max(255).optional(),
+  content: z.string().min(3).max(2000).optional(),
+});
+
 // ─── Update ───────────────────────────────────────────────────────────────────
 export const UpdateReviewSchema = z
   .object({

@@ -3,6 +3,7 @@ import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
 import { ROLES } from '@shared/constants/roles';
 import * as AnalyticsController from './analytics.controller';
+import * as SearchController from '@modules/search/search.controller';
 
 const router = Router();
 
@@ -20,6 +21,9 @@ router.get('/top-products', AnalyticsController.getTopProducts);
 
 // GET /api/v1/admin/analytics/top-vendors?limit=10
 router.get('/top-vendors', AnalyticsController.getTopVendors);
+
+// GET /api/v1/admin/analytics/top-searches?limit=20&from=&to=
+router.get('/top-searches', SearchController.getTopSearches);
 
 // GET /api/v1/admin/analytics/users-growth?from=2024-01-01&to=2024-12-31
 router.get('/users-growth', AnalyticsController.getUsersGrowth);

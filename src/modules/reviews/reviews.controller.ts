@@ -108,6 +108,23 @@ export const rejectReview = asyncHandler(async (req: Request, res: Response) => 
   sendSuccess({ res, message: 'Review rejected', data: review });
 });
 
+// ─── POST /reviews/admin  (admin authors a testimonial) ──────────────────────
+export const adminCreateReview = asyncHandler(async (req: Request, res: Response) => {
+  const review = await ReviewsService.adminCreateReview(req.body);
+  logActivity({
+    userId: req.user!.id,
+    role: 'admin',
+    action: 'create_review',
+    category: 'review',
+    entityType: 'review',
+    entityId: (review as any).id,
+    metadata: { productId: req.body.productId, rating: req.body.rating, authored: true },
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+  sendCreated(res, 'Review created', review);
+});
+
 // ─── GET /reviews/vendor/me  (vendor) ────────────────────────────────────────
 export const getVendorReviews = asyncHandler(async (req: Request, res: Response) => {
   const { reviews, meta } = await ReviewsService.getVendorReviews(

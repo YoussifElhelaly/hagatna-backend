@@ -165,6 +165,7 @@ model User {
   loyaltyAccount     LoyaltyAccount?
   mediaAssets        MediaAsset[]
   activityLogs       ActivityLog[]
+  searchQueries      SearchQuery[]
 
   @@map("users")
 }
@@ -735,8 +736,9 @@ model Shipment {
 
 model Review {
   id                 String       @id @default(uuid())
-  userId             String
-  user               User         @relation(fields: [userId], references: [id])
+  userId             String?                                  // null for admin-authored testimonials
+  user               User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  authorName         String?      @db.VarChar(100)            // display name when there is no linked user
   productId          String
   product            Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   vendorId           String
@@ -1051,6 +1053,27 @@ model ActivityLog {
 }
 
 // ═══════════════════════════════════════════════════════
+//  SEARCH ANALYTICS
+// ═══════════════════════════════════════════════════════
+
+// One row per committed storefront search. Aggregated by `normalized` to
+// surface the most-searched terms and (via resultsCount = 0) demand the
+// catalog can't yet fulfil.
+model SearchQuery {
+  id           String   @id @default(uuid())
+  term         String   @db.VarChar(100) // as typed (trimmed)
+  normalized   String   @db.VarChar(100) // lowercased + whitespace-collapsed, for grouping
+  resultsCount Int      @default(0)       // products matched at search time
+  userId       String?  @db.VarChar(100)
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([normalized])
+  @@index([createdAt])
+  @@map("search_queries")
+}
+
+// ═══════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════
 //  CONTACT MESSAGES
@@ -1088,6 +1111,31 @@ model LegalPage {
 
   @@unique([type, audience])
   @@map("legal_pages")
+}
+
+// ═══════════════════════════════════════════════════════
+//  BLOG
+// ═══════════════════════════════════════════════════════
+
+model BlogPost {
+  id              String    @id @default(uuid())
+  slug            String    @unique @db.VarChar(200)
+  title           Json      @default("{\"en\": \"\", \"ar\": \"\"}") // LocalizedString
+  excerpt         Json      @default("{\"en\": \"\", \"ar\": \"\"}") // short summary / meta description fallback
+  content         Json      @default("{\"en\": \"\", \"ar\": \"\"}") // full HTML body
+  coverImage      String?   @db.Text
+  metaTitle       Json?                                              // SEO <title> override
+  metaDescription Json?                                              // SEO meta description override
+  tags            Json      @default("[]")                           // string[]
+  status          String    @default("draft") @db.VarChar(20)        // draft | published
+  authorName      String?   @db.VarChar(100)
+  publishedAt     DateTime?
+  viewsCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status, publishedAt])
+  @@map("blog_posts")
 }
 
 //  PLATFORM SETTINGS
