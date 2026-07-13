@@ -15,6 +15,7 @@ const reviewSelect = {
   rating: true,
   title: true,
   content: true,
+  authorName: true,
   status: true,
   isVerifiedPurchase: true,
   helpfulCount: true,
@@ -258,6 +259,40 @@ export const rejectReview = async (reviewId: string) => {
   return prisma.review.update({
     where: { id: reviewId },
     data: { status: ReviewStatus.rejected },
+    select: reviewSelect,
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin — adminCreateReview
+// Author a review/testimonial directly (no linked user). Auto-approved so it
+// shows on the storefront immediately. vendorId is derived from the product.
+// ─────────────────────────────────────────────────────────────────────────────
+export const adminCreateReview = async (input: {
+  productId: string;
+  rating: number;
+  authorName: string;
+  title?: string;
+  content?: string;
+}) => {
+  const product = await prisma.product.findFirst({
+    where: { id: input.productId, deletedAt: null },
+    select: { id: true, vendorId: true, status: true },
+  });
+  if (!product) throw ApiError.notFound('Product not found');
+
+  return prisma.review.create({
+    data: {
+      userId: null,
+      authorName: input.authorName,
+      productId: product.id,
+      vendorId: product.vendorId,
+      rating: input.rating,
+      title: input.title,
+      content: input.content,
+      status: ReviewStatus.approved,
+      isVerifiedPurchase: false,
+    },
     select: reviewSelect,
   });
 };

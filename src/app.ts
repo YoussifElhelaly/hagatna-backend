@@ -54,6 +54,8 @@ import newsletterRoutes from '@modules/newsletter/newsletter.routes';
 import siteSettingsRoutes from '@modules/site-settings/site-settings.routes';
 import statsRoutes from '@modules/stats/stats.routes';
 import brandRoutes from '@modules/brands/brands.routes';
+import searchRoutes from '@modules/search/search.routes';
+import blogRoutes from '@modules/blog/blog.routes';
 
 // ─── Passport Config ─────────────────────────────────────────────────────────
 import '@config/passport';
@@ -168,6 +170,8 @@ app.use(`${API_PREFIX}/newsletter`, newsletterRoutes);
 app.use(`${API_PREFIX}/settings`, siteSettingsRoutes);
 app.use(`${API_PREFIX}/stats`, statsRoutes);
 app.use(`${API_PREFIX}/brands`, brandRoutes);
+app.use(`${API_PREFIX}/search`, searchRoutes);
+app.use(`${API_PREFIX}/blog`, blogRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, _res, next) => {

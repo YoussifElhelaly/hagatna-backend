@@ -5,6 +5,7 @@ import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
 import {
   CreateReviewSchema,
+  AdminCreateReviewSchema,
   UpdateReviewSchema,
   ReviewIdParamSchema,
   ProductSlugParamSchema,
@@ -48,6 +49,15 @@ router.get(
   authorize(ROLES.ADMIN),
   validate({ query: AdminReviewsQuerySchema }),
   ReviewsController.listReviews
+);
+
+// POST /api/v1/reviews/admin  (admin authors a review/testimonial)
+router.post(
+  '/admin',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate({ body: AdminCreateReviewSchema }),
+  ReviewsController.adminCreateReview
 );
 
 // PATCH /api/v1/reviews/:id/approve
