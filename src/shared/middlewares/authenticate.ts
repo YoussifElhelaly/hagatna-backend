@@ -6,12 +6,17 @@ import { prisma } from '@database/prisma/client';
 import { asyncHandler } from '@shared/utils/asyncHandler';
 
 export const authenticate = asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
-  // Prefer HTTP-only cookie; fall back to Bearer header for API clients / mobile
-  const token: string | undefined =
-    req.cookies?.accessToken ??
-    (req.headers.authorization?.startsWith('Bearer ')
-      ? req.headers.authorization.split(' ')[1]
-      : undefined);
+  // Prefer the explicit Bearer header over the ambient cookie.
+  // A single browser can hold logins for multiple roles (e.g. admin + customer)
+  // on the same API domain, and cookies are shared across those tabs — whichever
+  // role logged in last owns the accessToken cookie. Each SPA sends its OWN token
+  // in the Authorization header, so trusting the header first keeps each request
+  // scoped to the identity the calling app intends, not the leftover cookie.
+  const bearer: string | undefined = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.split(' ')[1]
+    : undefined;
+
+  const token: string | undefined = bearer ?? req.cookies?.accessToken;
 
   if (!token) {
     throw ApiError.unauthorized('No token provided');
