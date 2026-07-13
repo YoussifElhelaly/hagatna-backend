@@ -67,6 +67,9 @@ router.get('/admin/:orderNumber', authorize(ROLES.ADMIN), validate({ params: Ord
 // PATCH /api/v1/orders/admin/:orderNumber/status
 router.patch('/admin/:orderNumber/status', authorize(ROLES.ADMIN), validate({ params: OrderNumberParamSchema, body: UpdateOrderStatusSchema }), OrdersController.updateOrderStatus);
 
+// PATCH /api/v1/orders/admin/:orderNumber/mark-paid  — manually confirm payment (COD / bank transfer)
+router.patch('/admin/:orderNumber/mark-paid', authorize(ROLES.ADMIN), validate({ params: OrderNumberParamSchema }), OrdersController.markOrderPaid);
+
 // ─── Customer ─────────────────────────────────────────────────────────────────
 
 // POST /api/v1/orders/quote  — dry-run pricing for the checkout screen

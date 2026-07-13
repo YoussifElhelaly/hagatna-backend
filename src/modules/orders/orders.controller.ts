@@ -135,6 +135,22 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
   sendSuccess({ res, message: 'Order status updated', data: order });
 });
 
+// ─── PATCH /orders/admin/:orderNumber/mark-paid  (admin) ─────────────────────
+export const markOrderPaid = asyncHandler(async (req: Request, res: Response) => {
+  const order = await OrdersService.markOrderPaid(req.user!.id, req.params.orderNumber);
+  logActivity({
+    userId: req.user!.id,
+    role: 'admin',
+    action: 'mark_order_paid',
+    category: 'order',
+    entityType: 'order',
+    entityLabel: req.params.orderNumber,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+  sendSuccess({ res, message: 'Order marked as paid', data: order });
+});
+
 // ─── GET /orders/admin/:orderNumber  (admin) ──────────────────────────────────
 export const getAdminOrderDetail = asyncHandler(async (req: Request, res: Response) => {
   const order = await OrdersService.getAdminOrderDetail(req.params.orderNumber);
