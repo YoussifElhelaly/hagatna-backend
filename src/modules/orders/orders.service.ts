@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus, DiscountType, Prisma } from '@prisma/client';
+import { OrderStatus, PaymentStatus, PaymentMethod, DiscountType, Prisma } from '@prisma/client';
 import { prisma } from '@database/prisma/client';
 import { ApiError } from '@shared/utils/ApiError';
 import { buildPaginationMeta } from '@shared/utils/ApiResponse';
@@ -1017,10 +1017,22 @@ export const updateOrderStatus = async (
     );
   }
 
+  // Cash-on-delivery money is collected when the order is handed over, so a COD
+  // order reaching "delivered" is now paid. Nothing else marks COD as paid, so
+  // without this the revenue analytics (which count paymentStatus=completed)
+  // would never see COD income.
+  const markCodPaid =
+    input.status === OrderStatus.delivered &&
+    order.paymentMethod === PaymentMethod.cod &&
+    order.paymentStatus !== PaymentStatus.completed;
+
   await prisma.$transaction([
     prisma.order.update({
       where: { orderNumber },
-      data: { status: input.status },
+      data: {
+        status: input.status,
+        ...(markCodPaid && { paymentStatus: PaymentStatus.completed }),
+      },
     }),
     prisma.orderStatusHistory.create({
       data: {
@@ -1031,6 +1043,21 @@ export const updateOrderStatus = async (
         changedById: adminId,
       },
     }),
+    ...(markCodPaid
+      ? [
+          prisma.payment.upsert({
+            where: { orderId: order.id },
+            create: {
+              orderId: order.id,
+              amount: order.total,
+              method: PaymentMethod.cod,
+              status: PaymentStatus.completed,
+              paidAt: new Date(),
+            },
+            update: { status: PaymentStatus.completed, paidAt: new Date() },
+          }),
+        ]
+      : []),
   ]);
 
   // Notify the customer of the status change
@@ -1041,6 +1068,41 @@ export const updateOrderStatus = async (
   if (customer) {
     sendCustomerOrderStatusEmail(customer.email, customer.name, orderNumber, order.id, input.status);
   }
+
+  return getOrderByNumber(adminId, orderNumber, true);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin — markOrderPaid  (manually confirm payment, e.g. COD / bank transfer)
+// ─────────────────────────────────────────────────────────────────────────────
+export const markOrderPaid = async (adminId: string, orderNumber: string) => {
+  const order = await prisma.order.findUnique({ where: { orderNumber } });
+  if (!order) throw ApiError.notFound('Order not found');
+
+  if (order.paymentStatus === PaymentStatus.completed) {
+    throw ApiError.conflict('Order payment is already completed');
+  }
+  if (order.status === OrderStatus.cancelled) {
+    throw ApiError.conflict('Cannot mark a cancelled order as paid');
+  }
+
+  await prisma.$transaction([
+    prisma.order.update({
+      where: { orderNumber },
+      data: { paymentStatus: PaymentStatus.completed },
+    }),
+    prisma.payment.upsert({
+      where: { orderId: order.id },
+      create: {
+        orderId: order.id,
+        amount: order.total,
+        method: order.paymentMethod,
+        status: PaymentStatus.completed,
+        paidAt: new Date(),
+      },
+      update: { status: PaymentStatus.completed, paidAt: new Date() },
+    }),
+  ]);
 
   return getOrderByNumber(adminId, orderNumber, true);
 };
