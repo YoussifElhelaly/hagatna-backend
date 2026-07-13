@@ -27,7 +27,12 @@ export const env = cleanEnv(process.env, {
   JWT_REFRESH_EXPIRES_IN: str({ default: '7d' }),
 
   // Frontend
+  // FRONTEND_URL is a comma-separated list used ONLY for CORS/CSRF allow-listing.
   FRONTEND_URL: str({ default: 'http://localhost:3000' }),
+  // Per-role frontend origins used to build links inside emails / OAuth redirects.
+  CUSTOMER_URL: str({ default: 'http://localhost:3000' }),
+  VENDOR_URL: str({ default: 'http://localhost:3000' }),
+  ADMIN_URL: str({ default: 'http://localhost:3000' }),
 
   // Google OAuth
   GOOGLE_CLIENT_ID: str(),

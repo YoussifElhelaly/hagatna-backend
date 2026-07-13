@@ -13,6 +13,7 @@ import {
   ResetPasswordSchema,
 } from './auth.validation';
 import * as AuthController from './auth.controller';
+import { env } from '@config/env';
 
 const router = Router();
 
@@ -95,7 +96,7 @@ router.get(
   '/google/callback',
   passport.authenticate('google', {
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/auth/login?error=google_failed`,
+    failureRedirect: `${env.CUSTOMER_URL}/auth/login?error=google_failed`,
   }),
   AuthController.googleCallback
 );
@@ -116,7 +117,7 @@ router.get(
   '/facebook/callback',
   passport.authenticate('facebook', {
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL}/auth/login?error=facebook_failed`,
+    failureRedirect: `${env.CUSTOMER_URL}/auth/login?error=facebook_failed`,
   }),
   AuthController.facebookCallback
 );

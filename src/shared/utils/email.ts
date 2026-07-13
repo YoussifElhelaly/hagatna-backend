@@ -674,7 +674,7 @@ export const sendVendorWelcomeEmail = async (
       </p>
     </div>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/dashboard" class="btn-primary">Go to Dashboard</a>
+      <a href="${env.VENDOR_URL}/vendor/dashboard" class="btn-primary">Go to Dashboard</a>
     </div>
   `;
 
@@ -688,7 +688,7 @@ export const sendVendorWelcomeEmail = async (
       </p>
     </div>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/dashboard" class="btn-primary">الذهاب للوحة التحكم</a>
+      <a href="${env.VENDOR_URL}/vendor/dashboard" class="btn-primary">الذهاب للوحة التحكم</a>
     </div>
   `;
 
@@ -710,7 +710,7 @@ export const sendVendorApprovedEmail = async (
       </p>
     </div>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/dashboard" class="btn-cta">Start Selling</a>
+      <a href="${env.VENDOR_URL}/vendor/dashboard" class="btn-cta">Start Selling</a>
     </div>
   `;
 
@@ -723,7 +723,7 @@ export const sendVendorApprovedEmail = async (
       </p>
     </div>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/dashboard" class="btn-cta">ابدأ البيع</a>
+      <a href="${env.VENDOR_URL}/vendor/dashboard" class="btn-cta">ابدأ البيع</a>
     </div>
   `;
 
@@ -752,7 +752,7 @@ export const sendVendorRejectedEmail = async (
     </div>
     <p style="margin-top:16px;">You can update your application and reapply. If you have questions, please contact our support team.</p>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/onboarding" class="btn-primary">Reapply</a>
+      <a href="${env.VENDOR_URL}/vendor/onboarding" class="btn-primary">Reapply</a>
     </div>
   `;
 
@@ -767,7 +767,7 @@ export const sendVendorRejectedEmail = async (
     </div>
     <p style="margin-top:16px;">يمكنك تحديث طلبك وإعادة التسجيل. إذا كان لديك أي أسئلة، يرجى التواصل مع فريق الدعم.</p>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/onboarding" class="btn-primary">إعادة التسجيل</a>
+      <a href="${env.VENDOR_URL}/vendor/onboarding" class="btn-primary">إعادة التسجيل</a>
     </div>
   `;
 
@@ -837,7 +837,7 @@ export const sendVendorNewOrderEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/orders/${orderId}" class="btn-cta">View Order Details</a>
+      <a href="${env.VENDOR_URL}/vendor/orders/${orderId}" class="btn-cta">View Order Details</a>
     </div>
   `;
 
@@ -873,7 +873,7 @@ export const sendVendorNewOrderEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/orders/${orderId}" class="btn-cta">عرض تفاصيل الطلب</a>
+      <a href="${env.VENDOR_URL}/vendor/orders/${orderId}" class="btn-cta">عرض تفاصيل الطلب</a>
     </div>
   `;
 
@@ -912,7 +912,7 @@ export const sendVendorReturnRequestEmail = async (
     <p style="margin-top:16px;">Please review the request and take action.</p>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/returns?order=${orderId}" class="btn-cta">Review Return Request</a>
+      <a href="${env.VENDOR_URL}/vendor/returns?order=${orderId}" class="btn-cta">Review Return Request</a>
     </div>
   `;
 
@@ -938,7 +938,7 @@ export const sendVendorReturnRequestEmail = async (
     <p style="margin-top:16px;">يرجى مراجعة الطلب واتخاذ الإجراء المناسب.</p>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/returns?order=${orderId}" class="btn-cta">مراجعة طلب الاسترجاع</a>
+      <a href="${env.VENDOR_URL}/vendor/returns?order=${orderId}" class="btn-cta">مراجعة طلب الاسترجاع</a>
     </div>
   `;
 
@@ -982,7 +982,7 @@ export const sendVendorPayoutEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/earnings" class="btn-primary">View Earnings</a>
+      <a href="${env.VENDOR_URL}/vendor/earnings" class="btn-primary">View Earnings</a>
     </div>
   `;
 
@@ -1006,7 +1006,7 @@ export const sendVendorPayoutEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/vendor/earnings" class="btn-primary">عرض الأرباح</a>
+      <a href="${env.VENDOR_URL}/vendor/earnings" class="btn-primary">عرض الأرباح</a>
     </div>
   `;
 
@@ -1047,7 +1047,7 @@ export const sendAdminVendorApprovalEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/vendors/${vendorId}" class="btn-cta">Review Application</a>
+      <a href="${env.ADMIN_URL}/admin/vendors/${vendorId}" class="btn-cta">Review Application</a>
     </div>
   `;
 
@@ -1068,7 +1068,7 @@ export const sendAdminVendorApprovalEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/vendors/${vendorId}" class="btn-cta">مراجعة الطلب</a>
+      <a href="${env.ADMIN_URL}/admin/vendors/${vendorId}" class="btn-cta">مراجعة الطلب</a>
     </div>
   `;
 
@@ -1100,7 +1100,7 @@ export const sendAdminProductApprovalEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/products/${productId}" class="btn-cta">Review Product</a>
+      <a href="${env.ADMIN_URL}/admin/products/${productId}" class="btn-cta">Review Product</a>
     </div>
   `;
 
@@ -1121,7 +1121,7 @@ export const sendAdminProductApprovalEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/products/${productId}" class="btn-cta">مراجعة المنتج</a>
+      <a href="${env.ADMIN_URL}/admin/products/${productId}" class="btn-cta">مراجعة المنتج</a>
     </div>
   `;
 
@@ -1168,7 +1168,7 @@ export const sendAdminReturnStatusEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/returns?order=${orderId}" class="btn-primary">View Details</a>
+      <a href="${env.ADMIN_URL}/admin/returns?order=${orderId}" class="btn-primary">View Details</a>
     </div>
   `;
 
@@ -1189,7 +1189,7 @@ export const sendAdminReturnStatusEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/returns?order=${orderId}" class="btn-primary">عرض التفاصيل</a>
+      <a href="${env.ADMIN_URL}/admin/returns?order=${orderId}" class="btn-primary">عرض التفاصيل</a>
     </div>
   `;
 
@@ -1240,7 +1240,7 @@ export const sendAdminProductStatusEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/products/${productId}" class="btn-primary">View Product</a>
+      <a href="${env.ADMIN_URL}/admin/products/${productId}" class="btn-primary">View Product</a>
     </div>
   `;
 
@@ -1265,7 +1265,7 @@ export const sendAdminProductStatusEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/products/${productId}" class="btn-primary">عرض المنتج</a>
+      <a href="${env.ADMIN_URL}/admin/products/${productId}" class="btn-primary">عرض المنتج</a>
     </div>
   `;
 
@@ -1374,7 +1374,7 @@ export const sendCustomerOrderPlacedEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/orders/${orderId}" class="btn-cta">Track Your Order</a>
+      <a href="${env.CUSTOMER_URL}/orders/${orderId}" class="btn-cta">Track Your Order</a>
     </div>
   `;
 
@@ -1417,7 +1417,7 @@ export const sendCustomerOrderPlacedEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/orders/${orderId}" class="btn-cta">تتبع طلبك</a>
+      <a href="${env.CUSTOMER_URL}/orders/${orderId}" class="btn-cta">تتبع طلبك</a>
     </div>
   `;
 
@@ -1489,7 +1489,7 @@ export const sendCustomerOrderStatusEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/orders/${orderId}" class="btn-cta">Track Your Order</a>
+      <a href="${env.CUSTOMER_URL}/orders/${orderId}" class="btn-cta">Track Your Order</a>
     </div>
   `;
 
@@ -1506,7 +1506,7 @@ export const sendCustomerOrderStatusEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/orders/${orderId}" class="btn-cta">تتبع طلبك</a>
+      <a href="${env.CUSTOMER_URL}/orders/${orderId}" class="btn-cta">تتبع طلبك</a>
     </div>
   `;
 
@@ -1579,7 +1579,7 @@ export const sendCustomerRefundEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/orders/${orderId}" class="btn-primary">View Order</a>
+      <a href="${env.CUSTOMER_URL}/orders/${orderId}" class="btn-primary">View Order</a>
     </div>
   `;
 
@@ -1603,7 +1603,7 @@ export const sendCustomerRefundEmail = async (
     </div>
 
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/orders/${orderId}" class="btn-primary">عرض الطلب</a>
+      <a href="${env.CUSTOMER_URL}/orders/${orderId}" class="btn-primary">عرض الطلب</a>
     </div>
   `;
 
@@ -1676,7 +1676,7 @@ export const sendWelcomeEmail = async (to: string, name: string): Promise<void> 
     <h2>Welcome to Hagatna!</h2>
     <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, your account has been successfully verified. Start exploring thousands of products from our trusted vendors.</p>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/shop" class="btn-cta">Start Shopping</a>
+      <a href="${env.CUSTOMER_URL}/shop" class="btn-cta">Start Shopping</a>
     </div>
   `;
 
@@ -1684,7 +1684,7 @@ export const sendWelcomeEmail = async (to: string, name: string): Promise<void> 
     <h2>مرحباً بك في هاجاتنا!</h2>
     <p style="margin-bottom:16px;">مرحباً <strong>${eName}</strong>، تم التحقق من حسابك بنجاح. ابدأ استكشاف آلاف المنتجات من بائعينا الموثوقين.</p>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/shop" class="btn-cta">ابدأ التسوق</a>
+      <a href="${env.CUSTOMER_URL}/shop" class="btn-cta">ابدأ التسوق</a>
     </div>
   `;
 
@@ -1732,7 +1732,7 @@ export const sendContactEmailToAdmin = async (
       <p style="font-family:'Tajawal',sans-serif;font-size:14px;color:#454652;line-height:1.7;white-space:pre-wrap;">${eMessage}</p>
     </div>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/contact/${messageId}" class="btn-cta">View in Dashboard</a>
+      <a href="${env.ADMIN_URL}/admin/contact/${messageId}" class="btn-cta">View in Dashboard</a>
     </div>
   `;
 
@@ -1758,7 +1758,7 @@ export const sendContactEmailToAdmin = async (
       <p style="font-family:'Tajawal',sans-serif;font-size:14px;color:#454652;line-height:1.7;white-space:pre-wrap;">${eMessage}</p>
     </div>
     <div class="text-center mt-4">
-      <a href="${env.FRONTEND_URL}/admin/contact/${messageId}" class="btn-cta">عرض في لوحة التحكم</a>
+      <a href="${env.ADMIN_URL}/admin/contact/${messageId}" class="btn-cta">عرض في لوحة التحكم</a>
     </div>
   `;
 

@@ -141,3 +141,14 @@ uploads/*
 
 # Uploaded media
 uploads/
+
+# Env backups
+.env.bak*
+*.bak
+
+# Nginx SSL certificates & private keys (never commit)
+nginx/certs/
+
+# Database dumps / backups
+restore.sql
+*_backup_*.sql
