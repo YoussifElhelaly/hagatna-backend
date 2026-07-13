@@ -246,7 +246,10 @@ export const forgotPassword = async (email: string): Promise<void> => {
   // Store: key = hashed token, value = userId, TTL = 30min
   await redis.set(`reset:${hashedToken}`, user.id, 'EX', TTL.RESET_TOKEN);
 
-  const resetUrl = `${env.FRONTEND_URL}/auth/reset-password?token=${rawToken}`;
+  // Route the reset link to the frontend that matches the user's role.
+  const roleUrl =
+    user.role === 'admin' ? env.ADMIN_URL : user.role === 'vendor' ? env.VENDOR_URL : env.CUSTOMER_URL;
+  const resetUrl = `${roleUrl}/auth/reset-password?token=${rawToken}`;
   sendPasswordResetEmail(email, user.name, resetUrl);
 };
 

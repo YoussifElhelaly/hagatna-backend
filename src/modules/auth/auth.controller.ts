@@ -187,8 +187,7 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response) =
     userAgent: req.get('user-agent'),
   });
   // Redirect without tokens in URL — cookies carry the session
-  const frontendOrigin = env.FRONTEND_URL.split(',')[0].trim();
-  res.redirect(`${frontendOrigin}/auth/callback`);
+  res.redirect(`${env.CUSTOMER_URL}/auth/callback`);
 });
 
 // ─── GET /auth/facebook/callback ──────────────────────────────────────────────
@@ -210,6 +209,5 @@ export const facebookCallback = asyncHandler(async (req: Request, res: Response)
     ipAddress: req.ip,
     userAgent: req.get('user-agent'),
   });
-  const frontendOrigin = env.FRONTEND_URL.split(',')[0].trim();
-  res.redirect(`${frontendOrigin}/auth/callback`);
+  res.redirect(`${env.CUSTOMER_URL}/auth/callback`);
 });
