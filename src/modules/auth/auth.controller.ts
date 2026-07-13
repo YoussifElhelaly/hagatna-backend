@@ -109,8 +109,12 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
 // ─── POST /auth/refresh ───────────────────────────────────────────────────────
 export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
-  // Accept refresh token from HTTP-only cookie (preferred) or request body (API clients)
-  const token: string = req.cookies?.refreshToken ?? req.body?.refreshToken;
+  // Prefer the token the client sent explicitly in the body over the ambient
+  // cookie. On a browser shared between roles (admin + customer) the refreshToken
+  // cookie belongs to whichever role logged in last, so trusting the cookie first
+  // would refresh the wrong identity. SPAs receive both tokens in the login
+  // response body and send the refresh token back here explicitly.
+  const token: string = req.body?.refreshToken ?? req.cookies?.refreshToken;
   if (!token) throw ApiError.unauthorized('No refresh token provided');
 
   const { accessToken } = await AuthService.refreshToken(token);
