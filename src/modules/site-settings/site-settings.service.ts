@@ -1,4 +1,5 @@
 import { prisma } from '@database/prisma/client';
+import { getSettings as getPlatformSettings } from '../settings/settings.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public storefront settings — admin-controlled feature toggles.
@@ -25,9 +26,11 @@ const readBool = async (key: string, fallback: boolean): Promise<boolean> => {
 };
 
 // ─── GET public settings ──────────────────────────────────────────────────────
-export const getPublicSettings = async (): Promise<PublicSettings> => {
+export const getPublicSettings = async (): Promise<PublicSettings & { platform: any }> => {
+  const platformSettings = await getPlatformSettings();
   return {
     sellWithUsEnabled: await readBool(KEYS.sellWithUsEnabled, DEFAULTS.sellWithUsEnabled),
+    platform: platformSettings,
   };
 };
 
