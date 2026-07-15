@@ -231,6 +231,7 @@ export const ProductsListQuerySchema = z.object({
   limit:      z.coerce.number().int().min(1).max(100).optional().default(20),
   categoryId: z.string().uuid().optional(),
   vendorId:   z.string().uuid().optional(),
+  vendorSlug: z.string().optional(),
   brand:      z.string().min(1).max(150).optional(),   // brand slug or id
   minPrice:   z.coerce.number().positive().optional(),
   maxPrice:   z.coerce.number().positive().optional(),

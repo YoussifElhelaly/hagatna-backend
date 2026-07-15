@@ -80,6 +80,7 @@ export interface ProductsListQuery {
   limit?: number;
   categoryId?: string;
   vendorId?: string;
+  vendorSlug?: string;
   brand?: string;      // brand slug or id
   minPrice?: number;
   maxPrice?: number;

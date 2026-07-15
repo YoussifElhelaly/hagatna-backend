@@ -12,7 +12,7 @@ export const RegisterSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email address').toLowerCase().trim(),
   password: passwordSchema,
-  phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number').optional(),
+  phone: z.string().regex(/^(?:\+20|0)?1[0125]\d{8}$/, 'Invalid Egyptian phone number').optional(),
 });
 
 export const VerifyEmailSchema = z.object({

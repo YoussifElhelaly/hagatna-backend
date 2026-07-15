@@ -16,7 +16,7 @@ export const UpdateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   phone: z
     .string()
-    .regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number')
+    .regex(/^(?:\+20|0)?1[0125]\d{8}$/, 'Invalid Egyptian phone number')
     .optional(),
   avatar: imageUrlSchema('Invalid avatar URL').optional(),
 });
@@ -33,7 +33,7 @@ export const ChangePasswordSchema = z.object({
 export const CreateAddressSchema = z.object({
   label: z.string().max(50).optional(),
   recipientName: z.string().min(2).max(100),
-  phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number'),
+  phone: z.string().regex(/^(?:\+20|0)?1[0125]\d{8}$/, 'Invalid Egyptian phone number'),
   street: z.string().min(5).max(255),
   city: z.string().min(2).max(100),
   governorate: z.string().refine(isGovernorateCode, 'Unknown Egyptian governorate'),

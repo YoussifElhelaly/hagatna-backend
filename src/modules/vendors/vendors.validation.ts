@@ -12,7 +12,7 @@ const optionalLocalizedStringSchema = z.object({
   ar: z.string().min(1),
 }).optional();
 
-const phoneSchema = z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number');
+const phoneSchema = z.string().regex(/^(?:\+20|0)?1[0125]\d{8}$/, 'Invalid Egyptian phone number');
 
 // ─── Onboarding ───────────────────────────────────────────────────────────────
 export const OnboardVendorSchema = z.object({

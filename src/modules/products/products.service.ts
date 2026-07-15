@@ -158,7 +158,7 @@ const invalidateProductCache = async (slug: string) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const listProducts = async (query: ProductsListQuery, userId?: string) => {
   const {
-    page = 1, limit = 20, categoryId, vendorId, brand,
+    page = 1, limit = 20, categoryId, vendorId, vendorSlug, brand,
     minPrice, maxPrice, search, tag, isFeatured, onSale, sort = 'newest',
     attrs,
   } = query;
@@ -200,6 +200,7 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     deletedAt: null,
     ...(categoryIds && { categoryId: { in: categoryIds } }),
     ...(vendorId && { vendorId }),
+    ...(vendorSlug && { vendor: { storeSlug: vendorSlug } }),
     ...(brandId && { brandId }),
     ...(isFeatured !== undefined && { isFeatured }),
     // onSale: only products whose comparePrice is set AND greater than price
