@@ -12,8 +12,9 @@ import type {
   ProductVariantInput,
   UpdateVariantInput,
   ProductImageInput,
-  ProductsListQuery, AdminListProductsQuery,
-  VendorProductsListQuery, AdminListProductsQuery,
+  ProductsListQuery,
+  AdminListProductsQuery,
+  VendorProductsListQuery,
 } from './products.types';
 
 // ─── Shared selects ───────────────────────────────────────────────────────────
@@ -156,7 +157,7 @@ const invalidateProductCache = async (slug: string) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // listProducts  —  public, active + not soft-deleted
 // ─────────────────────────────────────────────────────────────────────────────
-export const listProducts = async (query: ProductsListQuery, AdminListProductsQuery, userId?: string) => {
+export const listProducts = async (query: ProductsListQuery, userId?: string) => {
   const {
     page = 1, limit = 20, categoryId, vendorId, vendorSlug, brand,
     minPrice, maxPrice, search, tag, isFeatured, onSale, sort = 'newest',
