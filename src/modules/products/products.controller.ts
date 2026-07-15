@@ -138,6 +138,12 @@ export const adminGetProduct = asyncHandler(async (req: Request, res: Response) 
   sendSuccess({ res, message: 'Product retrieved', data: product });
 });
 
+// ─── GET /products/admin (admin list products) ──────────────────────────────
+export const adminListProducts = asyncHandler(async (req: Request, res: Response) => {
+  const { products, meta } = await ProductsService.adminListProducts(req.query as never);
+  sendSuccess({ res, message: 'Products retrieved', data: products, meta });
+});
+
 // ─── PATCH /products/admin/:id  (admin updates any product) ──────────────────
 export const adminUpdateProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await ProductsService.adminUpdateProduct(req.params.id, req.body);

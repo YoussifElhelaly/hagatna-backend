@@ -254,3 +254,13 @@ export const VendorProductsListQuerySchema = z.object({
   status: z.nativeEnum(ProductStatus).optional(),
   search: z.string().max(100).optional(),
 });
+
+export const AdminListProductsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  categoryId: z.string().uuid().optional(),
+  brand: z.string().uuid().optional(),
+  status: z.nativeEnum(ProductStatus).optional(),
+  isFeatured: z.preprocess((val) => val === 'true' ? true : val === 'false' ? false : val, z.boolean().optional()),
+  search: z.string().max(100).optional(),
+});

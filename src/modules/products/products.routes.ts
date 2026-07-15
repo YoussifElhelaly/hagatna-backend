@@ -7,6 +7,7 @@ import {
   ProductsListQuerySchema,
   VendorProductsListQuerySchema,
   AdminProductsQuerySchema,
+  AdminListProductsQuerySchema,
   CreateProductSchema,
   UpdateProductSchema,
   AdminCreateProductSchema,
@@ -43,6 +44,15 @@ router.get(
 router.get('/featured', ProductsController.getFeaturedProducts);
 
 // ─── Admin — create / update any product ─────────────────────────────────────
+
+// GET /api/v1/products/admin (admin lists all products)
+router.get(
+  '/admin',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate({ query: AdminListProductsQuerySchema }),
+  ProductsController.adminListProducts
+);
 
 // POST  /api/v1/products/admin  (admin creates product for a vendor)
 router.post(

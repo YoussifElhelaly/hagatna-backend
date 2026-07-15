@@ -99,3 +99,13 @@ export interface VendorProductsListQuery {
   status?: ProductStatus;
   search?: string;
 }
+
+export interface AdminListProductsQuery {
+  page?: number;
+  limit?: number;
+  categoryId?: string;
+  brandId?: string;
+  status?: ProductStatus;
+  isFeatured?: boolean;
+  search?: string;
+}

@@ -12,8 +12,8 @@ import type {
   ProductVariantInput,
   UpdateVariantInput,
   ProductImageInput,
-  ProductsListQuery,
-  VendorProductsListQuery,
+  ProductsListQuery, AdminListProductsQuery,
+  VendorProductsListQuery, AdminListProductsQuery,
 } from './products.types';
 
 // ─── Shared selects ───────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ const invalidateProductCache = async (slug: string) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // listProducts  —  public, active + not soft-deleted
 // ─────────────────────────────────────────────────────────────────────────────
-export const listProducts = async (query: ProductsListQuery, userId?: string) => {
+export const listProducts = async (query: ProductsListQuery, AdminListProductsQuery, userId?: string) => {
   const {
     page = 1, limit = 20, categoryId, vendorId, vendorSlug, brand,
     minPrice, maxPrice, search, tag, isFeatured, onSale, sort = 'newest',
@@ -784,6 +784,62 @@ export const adminUpdateProduct = async (
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   return product;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin List Products
+// ─────────────────────────────────────────────────────────────────────────────
+export const adminListProducts = async (query: AdminListProductsQuery) => {
+  const {
+    page = 1, limit = 20, categoryId, brandId, status, isFeatured, search,
+  } = query;
+  const skip = (page - 1) * limit;
+
+  let categoryIds: string[] | undefined;
+  if (categoryId) {
+    const descendants = await getDescendantIds(categoryId);
+    categoryIds = [categoryId, ...descendants];
+  }
+
+  const where: Prisma.ProductWhereInput = {
+    deletedAt: null, // Always exclude deleted products
+    ...(status && { status }),
+    ...(categoryIds && { categoryId: { in: categoryIds } }),
+    ...(brandId && { brandId }),
+    ...(isFeatured !== undefined && { isFeatured }),
+    ...(search && {
+      OR: [
+        { name: { path: ['en'], string_contains: search } },
+        { name: { path: ['ar'], string_contains: search } },
+        { slug: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
+
+  const orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      select: {
+        ...productBaseSelect,
+        images: {
+          where: { isPrimary: true },
+          select: { url: true, altText: true },
+          take: 1,
+        },
+        tags: { select: { tag: true } },
+        vendor: { select: { id: true, storeName: true, storeSlug: true, mediaAssets: { where: { folder: 'vendors/logos' }, select: { url: true, id: true }, take: 1 } } },
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return { products, meta: buildPaginationMeta(total, page, limit) };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
