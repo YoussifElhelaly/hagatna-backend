@@ -55,7 +55,7 @@ export const listPayouts = async (query: {
 // ─────────────────────────────────────────────────────────────────────────────
 export const approvePayout = async (
   payoutId: string,
-  proof?: { url: string; publicId: string }
+  proof?: { url?: string; publicId?: string; transactionId?: string; documentNumber?: string }
 ) => {
   const commission = await prisma.vendorCommission.findUnique({ where: { id: payoutId } });
   if (!commission) throw ApiError.notFound('Payout record not found');
@@ -63,15 +63,20 @@ export const approvePayout = async (
     throw ApiError.conflict('This payout has already been approved');
   }
 
+  // Require documentNumber and transactionId
+  if (!proof?.documentNumber || !proof?.transactionId) {
+    throw ApiError.badRequest('رقم المستند ورقم العملية مطلوبان لتأكيد الدفع');
+  }
+
   return prisma.vendorCommission.update({
     where: { id: payoutId },
     data: {
       status:                PaymentStatus.completed,
       paidAt:                new Date(),
-      ...(proof && {
-        paymentProof:          proof.url,
-        paymentProofPublicId:  proof.publicId,
-      }),
+      paymentProof:          proof.url,
+      paymentProofPublicId:  proof.publicId,
+      transactionId:         proof.transactionId,
+      documentNumber:        proof.documentNumber,
     },
     select: commissionSelect,
   });

@@ -633,6 +633,8 @@ model VendorCommission {
   paidAt                 DateTime?
   paymentProof           String?       @db.Text   // Image URL of payment receipt
   paymentProofPublicId   String?       @db.VarChar(255)
+  transactionId          String?       @db.VarChar(255)
+  documentNumber         String?       @db.VarChar(255)
   createdAt              DateTime      @default(now())
 
   @@index([vendorId])

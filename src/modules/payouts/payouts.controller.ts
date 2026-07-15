@@ -13,10 +13,15 @@ export const listPayouts = asyncHandler(async (req: Request, res: Response) => {
 // ─── PATCH /admin/payouts/:id/approve ────────────────────────────────────────
 // Accepts optional multipart/form-data with field "image" as payment proof
 export const approvePayout = asyncHandler(async (req: Request, res: Response) => {
-  let proof: { url: string; publicId: string } | undefined;
+  let proof: { url?: string; publicId?: string; transactionId?: string; documentNumber?: string } = {
+    transactionId: req.body.transactionId,
+    documentNumber: req.body.documentNumber,
+  };
 
   if (req.file) {
-    proof = await uploadSingle(req.file, 'payouts');
+    const uploaded = await uploadSingle(req.file, 'payouts');
+    proof.url = uploaded.url;
+    proof.publicId = uploaded.publicId;
   }
 
   const payout = await PayoutsService.approvePayout(req.params.id, proof);
