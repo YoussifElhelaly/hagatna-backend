@@ -85,6 +85,31 @@ export const getProductReviews = async (productSlug: string, query: ProductRevie
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// getRecentReviews  —  public, recent high-rated approved reviews (testimonials)
+// ─────────────────────────────────────────────────────────────────────────────
+export const getRecentReviews = async (limit = 6) => {
+  return prisma.review.findMany({
+    where: {
+      status: ReviewStatus.approved,
+      deletedAt: null,
+      rating: { gte: 4 }, // Only showcase 4 or 5 star reviews
+      content: { not: null }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      rating: true,
+      title: true,
+      content: true,
+      authorName: true,
+      createdAt: true,
+      user: { select: { name: true, avatar: true } },
+    },
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // createReview  —  customer, one review per product per order
 // ─────────────────────────────────────────────────────────────────────────────
 export const createReview = async (userId: string, input: CreateReviewInput) => {

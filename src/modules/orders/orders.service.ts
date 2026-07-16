@@ -338,12 +338,16 @@ export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => 
   // ── 6.5. Resolve shipping method & fee ────────────────────────────────────
   // The method must serve the address's governorate, otherwise a customer could
   // pick a cheap method from a zone that does not deliver to them.
-  const method = await assertMethodServesGovernorate(
-    shippingMethodId,
-    governorate,
-    [...vendorGroups.keys()],
-  );
-  const totalShippingFee = priceMethod(method, totalSubtotal);
+  let method: any = null;
+  let totalShippingFee = 0;
+  if (shippingMethodId) {
+    method = await assertMethodServesGovernorate(
+      shippingMethodId,
+      governorate,
+      [...vendorGroups.keys()],
+    );
+    totalShippingFee = priceMethod(method, totalSubtotal);
+  }
 
   // ── 7. Per-vendor financials ──────────────────────────────────────────────
   const totalCartQuantity = cart.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -440,12 +444,12 @@ export const quoteOrder = async (userId: string, input: PlaceOrderInput) => {
     shippingFee:     Number(plan.totalShipping.toFixed(2)),
     total:           Number(plan.grandTotal.toFixed(2)),
     orderCount:      plan.vendorPlans.length,
-    shippingMethod: {
+    shippingMethod: plan.method ? {
       id: plan.method.id,
       name: plan.method.name,
       minDays: plan.method.minDays,
       maxDays: plan.method.maxDays,
-    },
+    } : null,
     vendorBreakdown: plan.vendorPlans.map((v) => ({
       vendorId:        v.vendorId,
       subtotal:        Number(v.subtotal.toFixed(2)),

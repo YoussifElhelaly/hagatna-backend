@@ -14,6 +14,13 @@ export const getProductReviews = asyncHandler(async (req: Request, res: Response
   sendSuccess({ res, message: 'Reviews retrieved', data: result.reviews, meta: result.meta, extra: { stats: result.stats } });
 });
 
+// ─── GET /reviews/recent  (public testimonials) ──────────────────────────────
+export const getRecentReviews = asyncHandler(async (req: Request, res: Response) => {
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 6;
+  const reviews = await ReviewsService.getRecentReviews(limit);
+  sendSuccess({ res, message: 'Recent reviews retrieved', data: reviews });
+});
+
 // ─── POST /reviews  (customer) ────────────────────────────────────────────────
 export const createReview = asyncHandler(async (req: Request, res: Response) => {
   const review = await ReviewsService.createReview(req.user!.id, req.body);

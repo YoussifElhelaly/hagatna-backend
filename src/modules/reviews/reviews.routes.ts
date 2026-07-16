@@ -22,6 +22,10 @@ const router = Router();
 
 // ─── Public ───────────────────────────────────────────────────────────────────
 
+// GET /api/v1/reviews/recent
+// Returns latest approved top reviews for the homepage
+router.get('/recent', ReviewsController.getRecentReviews);
+
 // GET /api/v1/reviews/product/:productSlug
 // Returns approved reviews + rating stats (average, distribution by star)
 router.get(

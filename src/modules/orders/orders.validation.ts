@@ -40,6 +40,7 @@ export const PlaceOrderSchema = z
 export const QuoteOrderSchema = z
   .object({
     ...PlaceOrderFields,
+    shippingMethodId: z.string().uuid('Invalid shipping method ID').optional(),
     paymentMethod: z.nativeEnum(PaymentMethod).optional().default(PaymentMethod.cod),
   })
   .refine(hasAddress, addressMessage);
