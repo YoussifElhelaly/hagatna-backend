@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
-import { uploadImage, uploadImages } from '@shared/middlewares/upload';
+import { uploadImage, uploadImages, validateFileSignature } from '@shared/middlewares/upload';
 import {
   uploadImageHandler,
   uploadImagesHandler,
@@ -17,11 +17,11 @@ router.use(authenticate);
 // ─── Single image ──────────────────────────────────────────────────────────────
 // POST /api/v1/upload/image?folder=products
 // Roles: vendor (for products/reviews), admin (for categories, banners), any auth user (for avatars)
-router.post('/image', uploadImage, uploadImageHandler);
+router.post('/image', uploadImage, validateFileSignature, uploadImageHandler);
 
 // ─── Multiple images ──────────────────────────────────────────────────────────
 // POST /api/v1/upload/images?folder=products
-router.post('/images', uploadImages, uploadImagesHandler);
+router.post('/images', uploadImages, validateFileSignature, uploadImagesHandler);
 
 // ─── Delete single file ───────────────────────────────────────────────────────
 // DELETE /api/v1/upload

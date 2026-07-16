@@ -346,13 +346,16 @@ export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => 
   const totalShippingFee = priceMethod(method, totalSubtotal);
 
   // ── 7. Per-vendor financials ──────────────────────────────────────────────
+  const totalCartQuantity = cart.items.reduce((sum, item) => sum + item.quantity, 0);
   const vendorPlans = [...vendorGroups.entries()].map(([vendorId, items]) => {
       // Per-vendor proportional financials
       const vendorSubtotal = items.reduce(
         (sum, item) => sum + Number(item.priceSnapshot) * item.quantity,
         0
       );
+      const vendorQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
       const vendorRatio = vendorSubtotal / totalSubtotal;
+      const vendorQuantityRatio = vendorQuantity / totalCartQuantity;
 
       // Coupon discount distributed by each vendor's share of the COUPON-ELIGIBLE subtotal
       const vendorCouponEligible = couponCategoryIds.length === 0
@@ -382,9 +385,9 @@ export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => 
       const vendorRedeemedPoints = Math.round(totalRedeemedPoints * pointsRatio);
 
       // The shipping-method fee (e.g. express surcharge) is split proportionally
-      // on top of this vendor's class-based product shipping.
+      // by item quantity instead of price to avoid assigning huge shipping fees to expensive items.
       const vendorProductShipping = calcClassShipping(items);
-      const vendorMethodFee = Number((totalShippingFee * vendorRatio).toFixed(2));
+      const vendorMethodFee = Number((totalShippingFee * vendorQuantityRatio).toFixed(2));
       const vendorShippingFee = Number((vendorMethodFee + vendorProductShipping).toFixed(2));
       const vendorFinalTotal = Number(
         Math.max(0, vendorSubtotal - vendorDiscountAmount - vendorPointsDiscount + vendorShippingFee).toFixed(2)

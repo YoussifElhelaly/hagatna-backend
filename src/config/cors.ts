@@ -15,8 +15,12 @@ if (env.NODE_ENV === 'development' && (!allowedOrigins.includes('http://localhos
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (mobile apps, Postman, curl) only in dev
+    if (!origin) {
+      if (env.NODE_ENV !== 'production') return callback(null, true);
+      return callback(new Error(`CORS policy: No origin allowed in production`));
+    }
+    
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }

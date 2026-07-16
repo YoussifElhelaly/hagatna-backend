@@ -277,6 +277,7 @@ model Category {
   promotions           PromotionCategory[]
 
   @@index([deletedAt])
+  @@index([name], type: Gin)
   @@map("categories")
 }
 
@@ -331,6 +332,7 @@ model Product {
   @@index([isFeatured])
   @@index([deletedAt])
   @@index([brandId])
+  @@index([name], type: Gin)
   @@map("products")
 }
 

@@ -57,3 +57,45 @@ export const uploadMixed = multer({
   { name: 'images',   maxCount: 10 },
   { name: 'document', maxCount: 1  },
 ]);
+
+// ─── Magic Number Verification ────────────────────────────────────────────────
+const checkMagicNumber = (buffer: Buffer, mimetype: string): boolean => {
+  if (buffer.length < 4) return false;
+  const hex = buffer.toString('hex', 0, 4).toUpperCase();
+  
+  if (mimetype === 'image/jpeg' || mimetype === 'image/jpg') {
+    return hex.startsWith('FFD8FF');
+  }
+  if (mimetype === 'image/png') {
+    return hex === '89504E47';
+  }
+  if (mimetype === 'image/webp') {
+    return buffer.toString('hex', 8, 12).toUpperCase() === '57454250';
+  }
+  if (mimetype === 'image/gif') {
+    return hex === '47494638';
+  }
+  if (mimetype === 'application/pdf') {
+    return hex === '25504446';
+  }
+  return false;
+};
+
+export const validateFileSignature = (req: Request, res: any, next: any) => {
+  const files: Express.Multer.File[] = [];
+  if (req.file) files.push(req.file);
+  if (req.files) {
+    if (Array.isArray(req.files)) {
+      files.push(...req.files);
+    } else {
+      Object.values(req.files).forEach((f) => files.push(...f));
+    }
+  }
+
+  for (const file of files) {
+    if (!checkMagicNumber(file.buffer, file.mimetype)) {
+      return next(new ApiError(400, `File signature mismatch for ${file.originalname}. Possible malicious file.`));
+    }
+  }
+  next();
+};
