@@ -1005,9 +1005,6 @@ export const generateImportTemplate = () => {
     'Stock Quantity*': '',
     'SKU': '',
     'Status': 'active',
-    'Vendor ID*': '',
-    'Category ID*': '',
-    'Brand ID': '',
   }]);
   const wb = xlsx.utils.book_new();
   xlsx.utils.book_append_sheet(wb, ws, 'Products');
@@ -1017,7 +1014,12 @@ export const generateImportTemplate = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // bulkImportProducts — parses XLSX/CSV and creates products
 // ─────────────────────────────────────────────────────────────────────────────
-export const bulkImportProducts = async (fileBuffer: Buffer) => {
+export const bulkImportProducts = async (
+  fileBuffer: Buffer,
+  vendorId: string,
+  categoryId: string,
+  brandId?: string
+) => {
   const wb = xlsx.read(fileBuffer, { type: 'buffer' });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = xlsx.utils.sheet_to_json<Record<string, any>>(ws);
@@ -1026,6 +1028,29 @@ export const bulkImportProducts = async (fileBuffer: Buffer) => {
     success: 0,
     errors: [] as { row: number; error: string }[],
   };
+
+  // Verify vendor
+  const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
+  if (!vendor) {
+    results.errors.push({ row: 0, error: 'Invalid Vendor ID' });
+    return results;
+  }
+
+  // Verify category
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category) {
+    results.errors.push({ row: 0, error: 'Invalid Category ID' });
+    return results;
+  }
+
+  // Verify brand if provided
+  if (brandId) {
+    const brand = await prisma.brand.findUnique({ where: { id: brandId } });
+    if (!brand) {
+      results.errors.push({ row: 0, error: 'Invalid Brand ID' });
+      return results;
+    }
+  }
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -1036,36 +1061,10 @@ export const bulkImportProducts = async (fileBuffer: Buffer) => {
       const nameAr = row['Name (AR)*'];
       const price = parseFloat(row['Price*']);
       const stockQuantity = parseInt(row['Stock Quantity*'], 10);
-      const vendorId = row['Vendor ID*'];
-      const categoryId = row['Category ID*'];
-      const brandId = row['Brand ID'];
 
-      if (!nameEn || !nameAr || isNaN(price) || isNaN(stockQuantity) || !vendorId || !categoryId) {
+      if (!nameEn || !nameAr || isNaN(price) || isNaN(stockQuantity)) {
         results.errors.push({ row: rowNum, error: 'Missing required fields' });
         continue;
-      }
-
-      // Verify vendor
-      const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
-      if (!vendor) {
-        results.errors.push({ row: rowNum, error: 'Invalid Vendor ID' });
-        continue;
-      }
-
-      // Verify category
-      const category = await prisma.category.findUnique({ where: { id: categoryId } });
-      if (!category) {
-        results.errors.push({ row: rowNum, error: 'Invalid Category ID' });
-        continue;
-      }
-
-      // Verify brand if provided
-      if (brandId) {
-        const brand = await prisma.brand.findUnique({ where: { id: brandId } });
-        if (!brand) {
-          results.errors.push({ row: rowNum, error: 'Invalid Brand ID' });
-          continue;
-        }
       }
 
       const slug = await generateUniqueSlug(nameEn, 'product');

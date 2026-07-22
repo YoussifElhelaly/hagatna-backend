@@ -219,6 +219,16 @@ export const importProducts = asyncHandler(async (req: Request, res: Response) =
     res.status(400).json({ status: 'fail', message: 'No file uploaded' });
     return;
   }
-  const result = await ProductsService.bulkImportProducts(req.file.buffer);
+  const { vendorId, categoryId, brandId } = req.body;
+  if (!vendorId || !categoryId) {
+    res.status(400).json({ status: 'fail', message: 'vendorId and categoryId are required' });
+    return;
+  }
+  const result = await ProductsService.bulkImportProducts(
+    req.file.buffer,
+    vendorId,
+    categoryId,
+    brandId
+  );
   sendSuccess({ res, message: 'Products import completed', data: result });
 });
