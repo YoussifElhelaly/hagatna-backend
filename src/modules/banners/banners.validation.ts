@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { imageUrlSchema } from '@shared/validation/imageUrl';
 
 const LocalizedStringSchema = z.object({
-  en: z.string().min(1, 'English text is required'),
-  ar: z.string().min(1, 'Arabic text is required'),
+  en: z.string().optional().default(''),
+  ar: z.string().optional().default(''),
 });
 
 // Optional localized text — empty strings allowed

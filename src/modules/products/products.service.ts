@@ -792,7 +792,7 @@ export const adminUpdateProduct = async (
 // ─────────────────────────────────────────────────────────────────────────────
 export const adminListProducts = async (query: AdminListProductsQuery) => {
   const {
-    page = 1, limit = 20, categoryId, brandId, status, isFeatured, search,
+    page = 1, limit = 20, categoryId, brandId, vendorId, status, isFeatured, search,
   } = query;
   const skip = (page - 1) * limit;
 
@@ -807,6 +807,7 @@ export const adminListProducts = async (query: AdminListProductsQuery) => {
     ...(status && { status }),
     ...(categoryIds && { categoryId: { in: categoryIds } }),
     ...(brandId && { brandId }),
+    ...(vendorId && { vendorId }),
     ...(isFeatured !== undefined && { isFeatured }),
     ...(search && {
       OR: [

@@ -104,6 +104,7 @@ export interface AdminListProductsQuery {
   page?: number;
   limit?: number;
   categoryId?: string;
+  vendorId?: string;
   brandId?: string;
   status?: ProductStatus;
   isFeatured?: boolean;
