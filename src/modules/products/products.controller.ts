@@ -204,3 +204,21 @@ export const setProductImages = asyncHandler(async (req: Request, res: Response)
   );
   sendSuccess({ res, message: 'Product images updated', data: images });
 });
+
+// ─── GET /products/admin/import/template ──────────────────────────────────────
+export const downloadImportTemplate = asyncHandler(async (req: Request, res: Response) => {
+  const buffer = ProductsService.generateImportTemplate();
+  res.setHeader('Content-Disposition', 'attachment; filename="products_import_template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buffer);
+});
+
+// ─── POST /products/admin/import ──────────────────────────────────────────────
+export const importProducts = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.file) {
+    res.status(400).json({ status: 'fail', message: 'No file uploaded' });
+    return;
+  }
+  const result = await ProductsService.bulkImportProducts(req.file.buffer);
+  sendSuccess({ res, message: 'Products import completed', data: result });
+});

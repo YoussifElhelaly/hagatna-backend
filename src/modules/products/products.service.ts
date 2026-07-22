@@ -1,3 +1,4 @@
+import * as xlsx from 'xlsx';
 import { ProductStatus, Prisma } from '@prisma/client';
 import { prisma } from '@database/prisma/client';
 import { redis, RedisKeys, TTL } from '@database/redis/client';
@@ -988,5 +989,114 @@ const normalizeImages = (images: ProductImageInput[]): ProductImageInput[] => {
     if (img.isPrimary && !foundFirst) { foundFirst = true; return img; }
     return { ...img, isPrimary: false };
   });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateImportTemplate — admin bulk import
+// ─────────────────────────────────────────────────────────────────────────────
+export const generateImportTemplate = () => {
+  const ws = xlsx.utils.json_to_sheet([{
+    'Name (EN)*': '',
+    'Name (AR)*': '',
+    'Description (EN)': '',
+    'Description (AR)': '',
+    'Price*': '',
+    'Compare Price': '',
+    'Stock Quantity*': '',
+    'SKU': '',
+    'Status': 'active',
+    'Vendor ID*': '',
+    'Category ID*': '',
+    'Brand ID': '',
+  }]);
+  const wb = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(wb, ws, 'Products');
+  return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bulkImportProducts — parses XLSX/CSV and creates products
+// ─────────────────────────────────────────────────────────────────────────────
+export const bulkImportProducts = async (fileBuffer: Buffer) => {
+  const wb = xlsx.read(fileBuffer, { type: 'buffer' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = xlsx.utils.sheet_to_json<Record<string, any>>(ws);
+
+  const results = {
+    success: 0,
+    errors: [] as { row: number; error: string }[],
+  };
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowNum = i + 2; // +1 for 0-index, +1 for header
+
+    try {
+      const nameEn = row['Name (EN)*'];
+      const nameAr = row['Name (AR)*'];
+      const price = parseFloat(row['Price*']);
+      const stockQuantity = parseInt(row['Stock Quantity*'], 10);
+      const vendorId = row['Vendor ID*'];
+      const categoryId = row['Category ID*'];
+      const brandId = row['Brand ID'];
+
+      if (!nameEn || !nameAr || isNaN(price) || isNaN(stockQuantity) || !vendorId || !categoryId) {
+        results.errors.push({ row: rowNum, error: 'Missing required fields' });
+        continue;
+      }
+
+      // Verify vendor
+      const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
+      if (!vendor) {
+        results.errors.push({ row: rowNum, error: 'Invalid Vendor ID' });
+        continue;
+      }
+
+      // Verify category
+      const category = await prisma.category.findUnique({ where: { id: categoryId } });
+      if (!category) {
+        results.errors.push({ row: rowNum, error: 'Invalid Category ID' });
+        continue;
+      }
+
+      // Verify brand if provided
+      if (brandId) {
+        const brand = await prisma.brand.findUnique({ where: { id: brandId } });
+        if (!brand) {
+          results.errors.push({ row: rowNum, error: 'Invalid Brand ID' });
+          continue;
+        }
+      }
+
+      const slug = await generateUniqueSlug(nameEn, 'product');
+      
+      const comparePrice = row['Compare Price'] ? parseFloat(row['Compare Price']) : undefined;
+      let status = (row['Status'] || 'active').toLowerCase();
+      if (!['active', 'draft', 'pending_approval', 'rejected', 'archived'].includes(status)) {
+        status = 'active';
+      }
+
+      await prisma.product.create({
+        data: {
+          vendorId,
+          categoryId,
+          brandId: brandId || undefined,
+          name: { en: nameEn, ar: nameAr },
+          description: { en: row['Description (EN)'] || '', ar: row['Description (AR)'] || '' },
+          price,
+          comparePrice: isNaN(comparePrice!) ? undefined : comparePrice,
+          stockQuantity,
+          sku: row['SKU'] || undefined,
+          slug,
+          status: status as ProductStatus,
+        }
+      });
+      results.success++;
+    } catch (err: any) {
+      results.errors.push({ row: rowNum, error: err.message || 'Unknown error' });
+    }
+  }
+
+  return results;
 };
 

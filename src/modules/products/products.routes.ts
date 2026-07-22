@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
 import { validate } from '@shared/middlewares/validate';
@@ -62,6 +63,24 @@ router.post(
   validate({ body: AdminCreateProductSchema }),
   ProductsController.adminCreateProduct
 );
+
+// GET /api/v1/products/admin/import/template
+router.get(
+  '/admin/import/template',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  ProductsController.downloadImportTemplate
+);
+
+// POST /api/v1/products/admin/import
+router.post(
+  '/admin/import',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  multer({ storage: multer.memoryStorage() }).single('file'),
+  ProductsController.importProducts
+);
+
 
 // GET  /api/v1/products/admin/:id  (admin fetches any product, full detail)
 router.get(
