@@ -24,6 +24,9 @@ export interface UpdateVendorProfileInput {
   country?: string;
   phone?: string;
   secondaryPhone?: string | null;
+  website?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
   taxCardNumber?: string;
   commercialRegistrationNumber?: string;
 }

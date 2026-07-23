@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '@shared/utils/asyncHandler';
 import { sendSuccess, sendCreated } from '@shared/utils/ApiResponse';
+import { ROLES } from '@shared/constants/roles';
 import * as AttributesService from './attributes.service';
 
 // ─── GET /attributes?categoryId=  (public) ───────────────────────────────────
@@ -49,7 +50,10 @@ export const getProductAttributes = asyncHandler(async (req: Request, res: Respo
 
 // ─── PUT /attributes/product/:productId  (vendor / admin) ────────────────────
 export const setProductAttributes = asyncHandler(async (req: Request, res: Response) => {
+  const isAdmin = req.user!.role === ROLES.ADMIN;
   const attrs = await AttributesService.setProductAttributes(
+    req.user!.id,
+    isAdmin,
     req.params.productId,
     req.body.attributes,
   );

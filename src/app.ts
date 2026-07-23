@@ -18,6 +18,7 @@ import { globalRateLimiter } from '@shared/middlewares/rateLimiter';
 import { csrfMiddleware } from '@shared/middlewares/csrf';
 import { localeMiddleware } from '@shared/middlewares/locale';
 import { errorHandler } from '@shared/middlewares/errorHandler';
+import { urlTransformerMiddleware } from '@shared/middlewares/urlTransformer.middleware';
 import { ApiError } from '@shared/utils/ApiError';
 import { logger } from '@shared/utils/logger';
 
@@ -110,6 +111,9 @@ app.use(globalRateLimiter);
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+// ─── Transform URLs in request body/query ──────────────────────────────────────
+app.use(urlTransformerMiddleware);
 
 // ─── Passport (OAuth) ─────────────────────────────────────────────────────────
 app.use(passport.initialize());

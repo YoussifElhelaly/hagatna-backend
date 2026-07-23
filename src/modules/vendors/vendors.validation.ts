@@ -42,6 +42,9 @@ export const UpdateVendorProfileSchema = z.object({
   secondaryPhone: phoneSchema.nullish(),
   taxCardNumber: z.string().min(1).max(50).optional(),
   commercialRegistrationNumber: z.string().min(1).max(100).optional(),
+  website: z.string().url().max(255).nullish(),
+  instagramUrl: z.string().url().max(255).nullish(),
+  facebookUrl: z.string().url().max(255).nullish(),
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided',
 });

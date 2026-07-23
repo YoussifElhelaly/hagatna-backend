@@ -15,9 +15,11 @@ const ALLOWED_FOLDERS: UploadFolder[] = [
   'categories',
   'reviews',
   'documents',
+  'brands',
+  'settings',
 ];
 
-const ADMIN_ONLY_FOLDERS: UploadFolder[] = ['banners', 'categories', 'documents'];
+const ADMIN_ONLY_FOLDERS: UploadFolder[] = ['banners', 'categories', 'documents', 'brands', 'settings'];
 const VENDOR_ADMIN_FOLDERS: UploadFolder[] = ['products', 'vendors/logos', 'vendors/banners'];
 
 const resolveFolder = (req: Request): UploadFolder => {

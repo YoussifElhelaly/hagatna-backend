@@ -15,6 +15,8 @@ export const UPLOAD_FOLDERS = [
   'reviews',
   'documents',
   'payouts',
+  'brands',
+  'settings',
 ] as const;
 
 export type UploadFolder = (typeof UPLOAD_FOLDERS)[number];

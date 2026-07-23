@@ -177,16 +177,25 @@ export const deleteDefinition = async (id: string) => {
 // setProductAttributes  (vendor / admin)
 // Validates keys against INHERITED + OWN definitions so a vendor can set
 // both parent-level (e.g. color, brand) and child-level (e.g. ram, storage).
+// Vendors may only set attributes on their own products; admins may set on any.
 // ─────────────────────────────────────────────────────────────────────────────
 export const setProductAttributes = async (
+  userId: string,
+  isAdmin: boolean,
   productId: string,
   attributes: Record<string, string>,
 ) => {
   const product = await prisma.product.findFirst({
     where:  { id: productId, deletedAt: null },
-    select: { id: true, categoryId: true },
+    select: { id: true, categoryId: true, vendorId: true },
   });
   if (!product) throw ApiError.notFound('Product not found');
+
+  if (!isAdmin) {
+    const vendor = await prisma.vendorProfile.findUnique({ where: { userId } });
+    if (!vendor) throw ApiError.forbidden('Vendor profile not found');
+    if (product.vendorId !== vendor.id) throw ApiError.forbidden('You do not own this product');
+  }
 
   // Resolve full definition set (own + inherited)
   const definitions = await resolveDefinitions(product.categoryId);

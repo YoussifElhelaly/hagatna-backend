@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { traverseAndTransform } from './urlTransformer';
 
 export interface PaginationMeta {
   total: number;
@@ -24,6 +25,11 @@ export const sendSuccess = <T>({
   meta,
   extra,
 }: ApiResponseOptions<T>): Response => {
+  const origin = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+  if (data !== undefined && data !== null) {
+    traverseAndTransform(data, 'toFull', origin);
+  }
+
   return res.status(statusCode).json({
     success: true,
     message,
