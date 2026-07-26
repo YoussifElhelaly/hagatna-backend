@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { env } from '@config/env';
 import { logger } from '@shared/utils/logger';
+import { getSettings } from '@modules/settings/settings.service';
 
 // ─── Transporter ──────────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
@@ -67,8 +68,57 @@ const DS = {
   radiusFull: '9999px',
 } as const;
 
+// ─── Logo ─────────────────────────────────────────────────────────────────────
+// Pulls the logo configured in Platform Settings (admin-uploaded, served from
+// this backend's /uploads route). Falls back to a plain text/CSS mark if no
+// logo has been uploaded yet, so emails never break on a missing asset.
+const fallbackLogoMark = `
+  <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 14px auto;">
+    <tr>
+      <td align="center" valign="middle" style="width:52px;height:52px;background-color:${DS.navy};border-radius:${DS.radiusMd};">
+        <span style="font-family:${DS.fontHeadline};font-size:26px;font-weight:900;color:#ffffff;line-height:1;">H</span>
+      </td>
+      <td style="width:8px;"></td>
+      <td align="center" valign="bottom" style="width:12px;height:52px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:${DS.radiusFull};background-color:${DS.cta};margin-bottom:4px;"></span>
+      </td>
+    </tr>
+  </table>
+`;
+
+let logoCache: { html: string; expiresAt: number } | null = null;
+const LOGO_CACHE_TTL_MS = 60_000;
+
+const getLogoHtml = async (): Promise<string> => {
+  if (logoCache && logoCache.expiresAt > Date.now()) return logoCache.html;
+
+  let html = fallbackLogoMark;
+  try {
+    const settings = await getSettings();
+    if (settings.logo) {
+      const src = settings.logo.startsWith('/uploads') ? `${env.BACKEND_URL}${settings.logo}` : settings.logo;
+      html = `
+        <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 14px auto;">
+          <tr>
+            <td align="center">
+              <img src="${src}" alt="Hagatnaa" height="48" style="height:48px;width:auto;display:block;" />
+            </td>
+          </tr>
+        </table>
+      `;
+    }
+  } catch (error) {
+    logger.error('Failed to load platform logo for email header, using fallback:', error);
+  }
+
+  logoCache = { html, expiresAt: Date.now() + LOGO_CACHE_TTL_MS };
+  return html;
+};
+
 // ─── Base Template ────────────────────────────────────────────────────────────
-const baseTemplate = (contentEn: string, contentAr: string): string => `
+const baseTemplate = async (contentEn: string, contentAr: string): Promise<string> => {
+  const logoHtml = await getLogoHtml();
+  return `
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -382,7 +432,8 @@ const baseTemplate = (contentEn: string, contentAr: string): string => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>Hagatna<span class="dot">.</span></h1>
+      ${logoHtml}
+      <h1>Hagatnaa<span class="dot">.</span></h1>
       <p>Multi-Vendor E-commerce Platform</p>
     </div>
     <div class="body">
@@ -391,16 +442,19 @@ const baseTemplate = (contentEn: string, contentAr: string): string => `
       <div class="ar-section">${contentAr}</div>
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Hagatna. All rights reserved.<br/>
+      <p>© ${new Date().getFullYear()} Hagatnaa. All rights reserved.<br/>
       If you did not request this email, please ignore it.</p>
     </div>
   </div>
 </body>
 </html>
 `;
+};
 
 // ─── Single-Language Template (for emails that are only in one language) ──────
-const singleTemplate = (content: string): string => `
+const singleTemplate = async (content: string): Promise<string> => {
+  const logoHtml = await getLogoHtml();
+  return `
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
@@ -599,19 +653,21 @@ const singleTemplate = (content: string): string => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>Hagatna<span class="dot">.</span></h1>
+      ${logoHtml}
+      <h1>Hagatnaa<span class="dot">.</span></h1>
       <p>Multi-Vendor E-commerce Platform</p>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Hagatna. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} Hagatnaa. All rights reserved.</p>
     </div>
   </div>
 </body>
 </html>
 `;
+};
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -627,7 +683,7 @@ export const sendVendorVerificationEmail = async (
 ): Promise<void> => {
   const contentEn = `
     <h2>Verify Your Email</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, thank you for registering as a vendor on Hagatna! Please verify your email to activate your account.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, thank you for registering as a vendor on Hagatnaa! Please verify your email to activate your account.</p>
     <div class="otp-block">
       <div class="otp-label">VERIFICATION CODE</div>
       <div class="otp-code">${otp}</div>
@@ -642,7 +698,7 @@ export const sendVendorVerificationEmail = async (
 
   const contentAr = `
     <h2>تحقق من بريدك الإلكتروني</h2>
-    <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، شكراً لتسجيلك كبائع على هاجاتنا! يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك.</p>
+    <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، شكراً لتسجيلك كبائع على حاجاتنا! يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك.</p>
     <div class="otp-block">
       <div class="otp-label">رمز التحقق</div>
       <div class="otp-code">${otp}</div>
@@ -655,7 +711,7 @@ export const sendVendorVerificationEmail = async (
     <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص.</p>
   `;
 
-  await send(to, 'Verify your Hagatna vendor account / تحقق من حسابك كبائع', baseTemplate(contentEn, contentAr));
+  await send(to, 'Verify your Hagatnaa vendor account / تحقق من حسابك كبائع', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Welcome (after verification) ─────────────────────────────────────
@@ -665,7 +721,7 @@ export const sendVendorWelcomeEmail = async (
   storeName: string,
 ): Promise<void> => {
   const contentEn = `
-    <h2>Welcome to Hagatna!</h2>
+    <h2>Welcome to Hagatnaa!</h2>
     <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, your email has been verified and your store <strong>"${storeName}"</strong> is now under review.</p>
     <div class="card">
       <p style="font-size:14px;color:${DS.onSurfaceVar};">
@@ -679,7 +735,7 @@ export const sendVendorWelcomeEmail = async (
   `;
 
   const contentAr = `
-    <h2>مرحباً بك في هاجاتنا!</h2>
+    <h2>مرحباً بك في حاجاتنا!</h2>
     <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، تم التحقق من بريدك الإلكتروني ومتجرك <strong>"${storeName}"</strong> الآن قيد المراجعة.</p>
     <div class="card">
       <p style="font-size:14px;color:${DS.onSurfaceVar};">
@@ -692,7 +748,7 @@ export const sendVendorWelcomeEmail = async (
     </div>
   `;
 
-  await send(to, 'Welcome to Hagatna! / مرحباً بك في هاجاتنا!', baseTemplate(contentEn, contentAr));
+  await send(to, 'Welcome to Hagatnaa! / مرحباً بك في حاجاتنا!', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Welcome (after admin approval) ───────────────────────────────────
@@ -703,7 +759,7 @@ export const sendVendorApprovedEmail = async (
 ): Promise<void> => {
   const contentEn = `
     <h2>🎉 Your Store is Approved!</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, great news! Your store <strong>"${storeName}"</strong> has been approved and is now live on Hagatna.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, great news! Your store <strong>"${storeName}"</strong> has been approved and is now live on Hagatnaa.</p>
     <div class="card">
       <p style="font-size:14px;color:${DS.onSurfaceVar};">
         You can now start adding products, managing orders, and growing your business. Welcome aboard!
@@ -716,7 +772,7 @@ export const sendVendorApprovedEmail = async (
 
   const contentAr = `
     <h2>🎉 تمت الموافقة على متجرك!</h2>
-    <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، أخبار رائعة! تمت الموافقة على متجرك <strong>"${storeName}"</strong> وهو الآن مباشر على هاجاتنا.</p>
+    <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، أخبار رائعة! تمت الموافقة على متجرك <strong>"${storeName}"</strong> وهو الآن مباشر على حاجاتنا.</p>
     <div class="card">
       <p style="font-size:14px;color:${DS.onSurfaceVar};">
         يمكنك الآن البدء في إضافة المنتجات وإدارة الطلبات وتنمية أعمالك. مرحباً بك!
@@ -727,7 +783,7 @@ export const sendVendorApprovedEmail = async (
     </div>
   `;
 
-  await send(to, 'Your store is approved! / تمت الموافقة على متجرك!', baseTemplate(contentEn, contentAr));
+  await send(to, 'Your store is approved! / تمت الموافقة على متجرك!', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Rejection ────────────────────────────────────────────────────────
@@ -771,7 +827,7 @@ export const sendVendorRejectedEmail = async (
     </div>
   `;
 
-  await send(to, 'Your vendor application was not approved / لم يتم الموافقة على طلبك', baseTemplate(contentEn, contentAr));
+  await send(to, 'Your vendor application was not approved / لم يتم الموافقة على طلبك', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: New Order ────────────────────────────────────────────────────────
@@ -877,7 +933,7 @@ export const sendVendorNewOrderEmail = async (
     </div>
   `;
 
-  await send(to, `New order #${orderNumber} / طلب جديد #${orderNumber}`, baseTemplate(contentEn, contentAr));
+  await send(to, `New order #${orderNumber} / طلب جديد #${orderNumber}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Return Request ───────────────────────────────────────────────────
@@ -942,7 +998,7 @@ export const sendVendorReturnRequestEmail = async (
     </div>
   `;
 
-  await send(to, `Return request for order #${orderNumber} / طلب استرجاع للطلب #${orderNumber}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Return request for order #${orderNumber} / طلب استرجاع للطلب #${orderNumber}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Vendor: Payout (request + execution) ─────────────────────────────────────
@@ -1014,7 +1070,7 @@ export const sendVendorPayoutEmail = async (
     ? 'Payout requested / تم طلب السحب'
     : 'Payout completed / تم تنفيذ السحب';
 
-  await send(to, subject, baseTemplate(contentEn, contentAr));
+  await send(to, subject, await baseTemplate(contentEn, contentAr));
 };
 
 
@@ -1072,7 +1128,7 @@ export const sendAdminVendorApprovalEmail = async (
     </div>
   `;
 
-  await send(to, `New vendor registration: ${storeName} / تسجيل بائع جديد: ${storeName}`, baseTemplate(contentEn, contentAr));
+  await send(to, `New vendor registration: ${storeName} / تسجيل بائع جديد: ${storeName}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Admin: Product Approval Request ──────────────────────────────────────────
@@ -1125,7 +1181,7 @@ export const sendAdminProductApprovalEmail = async (
     </div>
   `;
 
-  await send(to, `New product pending approval: ${productName} / منتج جديد يحتاج موافقة: ${productName}`, baseTemplate(contentEn, contentAr));
+  await send(to, `New product pending approval: ${productName} / منتج جديد يحتاج موافقة: ${productName}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Admin: Return Status Change ──────────────────────────────────────────────
@@ -1193,7 +1249,7 @@ export const sendAdminReturnStatusEmail = async (
     </div>
   `;
 
-  await send(to, `Return status updated for order #${orderNumber} / تحديث حالة الاسترجاع للطلب #${orderNumber}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Return status updated for order #${orderNumber} / تحديث حالة الاسترجاع للطلب #${orderNumber}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Admin: Product Status Change ─────────────────────────────────────────────
@@ -1269,7 +1325,7 @@ export const sendAdminProductStatusEmail = async (
     </div>
   `;
 
-  await send(to, `Product status updated: ${productName} / تحديث حالة المنتج: ${productName}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Product status updated: ${productName} / تحديث حالة المنتج: ${productName}`, await baseTemplate(contentEn, contentAr));
 };
 
 
@@ -1285,7 +1341,7 @@ export const sendCustomerVerificationEmail = async (
 ): Promise<void> => {
   const contentEn = `
     <h2>Verify Your Email</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, welcome to Hagatna! Use the code below to verify your email and activate your account.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${name}</strong>, welcome to Hagatnaa! Use the code below to verify your email and activate your account.</p>
 
     <div class="otp-block">
       <div class="otp-label">VERIFICATION CODE</div>
@@ -1293,12 +1349,12 @@ export const sendCustomerVerificationEmail = async (
       <div class="otp-expire">Expires in 10 minutes</div>
     </div>
 
-    <p class="text-muted text-center">Never share this code with anyone. Hagatna will never ask for your OTP.</p>
+    <p class="text-muted text-center">Never share this code with anyone. Hagatnaa will never ask for your OTP.</p>
   `;
 
   const contentAr = `
     <h2>تحقق من بريدك الإلكتروني</h2>
-    <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، أهلاً بك في هاجاتنا! استخدم الرمز أدناه للتحقق من بريدك وتفعيل حسابك.</p>
+    <p style="margin-bottom:16px;">مرحباً <strong>${name}</strong>، أهلاً بك في حاجاتنا! استخدم الرمز أدناه للتحقق من بريدك وتفعيل حسابك.</p>
 
     <div class="otp-block">
       <div class="otp-label">رمز التحقق</div>
@@ -1306,10 +1362,10 @@ export const sendCustomerVerificationEmail = async (
       <div class="otp-expire">تنتهي صلاحيته خلال 10 دقائق</div>
     </div>
 
-    <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص. لن تطلب هاجاتنا رمز التحقق أبداً.</p>
+    <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص. لن تطلب حاجاتنا رمز التحقق أبداً.</p>
   `;
 
-  await send(to, 'Verify your Hagatna account / تحقق من حسابك في هاجاتنا', baseTemplate(contentEn, contentAr));
+  await send(to, 'Verify your Hagatnaa account / تحقق من حسابك في حاجاتنا', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Customer: Order Placed ───────────────────────────────────────────────────
@@ -1421,7 +1477,7 @@ export const sendCustomerOrderPlacedEmail = async (
     </div>
   `;
 
-  await send(to, `Order received #${orderNumber} / تم استلام طلبك #${orderNumber}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Order received #${orderNumber} / تم استلام طلبك #${orderNumber}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Customer: Order Status Change ────────────────────────────────────────────
@@ -1518,7 +1574,7 @@ export const sendCustomerOrderStatusEmail = async (
     </div>
   `;
 
-  await send(to, `Order #${orderNumber} status: ${config.en} / حالة الطلب #${orderNumber}: ${config.ar}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Order #${orderNumber} status: ${config.en} / حالة الطلب #${orderNumber}: ${config.ar}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Customer: Refund Status ──────────────────────────────────────────────────
@@ -1615,7 +1671,7 @@ export const sendCustomerRefundEmail = async (
     </div>
   `;
 
-  await send(to, `Refund update for order #${orderNumber} / تحديث الاسترجاع للطلب #${orderNumber}`, baseTemplate(contentEn, contentAr));
+  await send(to, `Refund update for order #${orderNumber} / تحديث الاسترجاع للطلب #${orderNumber}`, await baseTemplate(contentEn, contentAr));
 };
 
 
@@ -1628,27 +1684,27 @@ export const sendOtpEmail = async (to: string, name: string, otp: string): Promi
   const eName = esc(name);
   const contentEn = `
     <h2>Verify Your Email Address</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, welcome to Hagatna! Use the code below to verify your email address and activate your account.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, welcome to Hagatnaa! Use the code below to verify your email address and activate your account.</p>
     <div class="otp-block">
       <div class="otp-label">VERIFICATION CODE</div>
       <div class="otp-code">${otp}</div>
       <div class="otp-expire">Expires in 10 minutes</div>
     </div>
-    <p class="text-muted text-center">Never share this code with anyone. Hagatna will never ask for your OTP.</p>
+    <p class="text-muted text-center">Never share this code with anyone. Hagatnaa will never ask for your OTP.</p>
   `;
 
   const contentAr = `
     <h2>تحقق من عنوان بريدك الإلكتروني</h2>
-    <p style="margin-bottom:16px;">مرحباً <strong>${eName}</strong>، أهلاً بك في هاجاتنا! استخدم الرمز أدناه للتحقق من بريدك الإلكتروني وتفعيل حسابك.</p>
+    <p style="margin-bottom:16px;">مرحباً <strong>${eName}</strong>، أهلاً بك في حاجاتنا! استخدم الرمز أدناه للتحقق من بريدك الإلكتروني وتفعيل حسابك.</p>
     <div class="otp-block">
       <div class="otp-label">رمز التحقق</div>
       <div class="otp-code">${otp}</div>
       <div class="otp-expire">تنتهي صلاحيته خلال 10 دقائق</div>
     </div>
-    <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص. لن تطلب هاجاتنا رمز OTP الخاص بك أبداً.</p>
+    <p class="text-muted text-center">لا تشارك هذا الرمز مع أي شخص. لن تطلب حاجاتنا رمز OTP الخاص بك أبداً.</p>
   `;
 
-  await send(to, 'Verify your Hagatna account / تحقق من حسابك في هاجاتنا', baseTemplate(contentEn, contentAr));
+  await send(to, 'Verify your Hagatnaa account / تحقق من حسابك في حاجاتنا', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Password Reset Email ─────────────────────────────────────────────────────
@@ -1656,7 +1712,7 @@ export const sendPasswordResetEmail = async (to: string, name: string, resetUrl:
   const eName = esc(name);
   const contentEn = `
     <h2>Reset Your Password</h2>
-    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, we received a request to reset the password for your Hagatna account. Click the button below to set a new password.</p>
+    <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, we received a request to reset the password for your Hagatnaa account. Click the button below to set a new password.</p>
     <div class="text-center mt-4 mb-4">
       <a href="${resetUrl}" class="btn-cta">Reset My Password</a>
     </div>
@@ -1666,7 +1722,7 @@ export const sendPasswordResetEmail = async (to: string, name: string, resetUrl:
 
   const contentAr = `
     <h2>إعادة تعيين كلمة المرور</h2>
-    <p style="margin-bottom:16px;">مرحباً <strong>${eName}</strong>، تلقينا طلباً لإعادة تعيين كلمة مرور حسابك في هاجاتنا. انقر على الزر أدناه لتعيين كلمة مرور جديدة.</p>
+    <p style="margin-bottom:16px;">مرحباً <strong>${eName}</strong>، تلقينا طلباً لإعادة تعيين كلمة مرور حسابك في حاجاتنا. انقر على الزر أدناه لتعيين كلمة مرور جديدة.</p>
     <div class="text-center mt-4 mb-4">
       <a href="${resetUrl}" class="btn-cta">إعادة تعيين كلمة المرور</a>
     </div>
@@ -1674,14 +1730,14 @@ export const sendPasswordResetEmail = async (to: string, name: string, resetUrl:
     <p class="text-muted text-center mt-4">ينتهي هذا الرابط خلال 30 دقيقة.</p>
   `;
 
-  await send(to, 'Reset your Hagatna password / إعادة تعيين كلمة مرورك', baseTemplate(contentEn, contentAr));
+  await send(to, 'Reset your Hagatnaa password / إعادة تعيين كلمة مرورك', await baseTemplate(contentEn, contentAr));
 };
 
 // ─── Welcome Email ────────────────────────────────────────────────────────────
 export const sendWelcomeEmail = async (to: string, name: string): Promise<void> => {
   const eName = esc(name);
   const contentEn = `
-    <h2>Welcome to Hagatna!</h2>
+    <h2>Welcome to Hagatnaa!</h2>
     <p style="margin-bottom:16px;">Hi <strong>${eName}</strong>, your account has been successfully verified. Start exploring thousands of products from our trusted vendors.</p>
     <div class="text-center mt-4">
       <a href="${env.CUSTOMER_URL}/shop" class="btn-cta">Start Shopping</a>
@@ -1689,14 +1745,14 @@ export const sendWelcomeEmail = async (to: string, name: string): Promise<void> 
   `;
 
   const contentAr = `
-    <h2>مرحباً بك في هاجاتنا!</h2>
+    <h2>مرحباً بك في حاجاتنا!</h2>
     <p style="margin-bottom:16px;">مرحباً <strong>${eName}</strong>، تم التحقق من حسابك بنجاح. ابدأ استكشاف آلاف المنتجات من بائعينا الموثوقين.</p>
     <div class="text-center mt-4">
       <a href="${env.CUSTOMER_URL}/shop" class="btn-cta">ابدأ التسوق</a>
     </div>
   `;
 
-  await send(to, 'Welcome to Hagatna! / مرحباً بك في هاجاتنا!', baseTemplate(contentEn, contentAr));
+  await send(to, 'Welcome to Hagatnaa! / مرحباً بك في حاجاتنا!', await baseTemplate(contentEn, contentAr));
 };
 
 
@@ -1770,7 +1826,7 @@ export const sendContactEmailToAdmin = async (
     </div>
   `;
 
-  await send(adminEmail, `New Contact: ${eSubject} / رسالة تواصل جديدة: ${eSubject}`, baseTemplate(contentEn, contentAr));
+  await send(adminEmail, `New Contact: ${eSubject} / رسالة تواصل جديدة: ${eSubject}`, await baseTemplate(contentEn, contentAr));
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

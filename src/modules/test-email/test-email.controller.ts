@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 
 export const sendTestEmail = asyncHandler(async (req: Request, res: Response) => {
   const to = (req.body.to as string) || 'youssifelhelaly@shinefy.co';
-  const subject = (req.body.subject as string) || 'Hagatna - Test Email';
+  const subject = (req.body.subject as string) || 'Hagatnaa - Test Email';
 
   const html = `
   <!DOCTYPE html>
@@ -40,10 +40,10 @@ export const sendTestEmail = asyncHandler(async (req: Request, res: Response) =>
   </head>
   <body>
     <div class="wrapper">
-      <div class="header"><div class="logo">Hag<span>atna.</span></div></div>
+      <div class="header"><div class="logo">Hag<span>atnaa.</span></div></div>
       <div class="body">
         <h2>Test Email - SMTP Working!</h2>
-        <p>This is a test email sent from the <strong>Hagatna</strong> backend.</p>
+        <p>This is a test email sent from the <strong>Hagatnaa</strong> backend.</p>
         <div class="info">
           <p><strong>SMTP Host:</strong> ${env.SMTP_HOST}:${env.SMTP_PORT}</p>
           <p><strong>From:</strong> ${env.EMAIL_FROM}</p>
@@ -52,7 +52,7 @@ export const sendTestEmail = asyncHandler(async (req: Request, res: Response) =>
         </div>
         <p>If you received this email, your SMTP configuration is working correctly.</p>
       </div>
-      <div class="footer">&copy; ${new Date().getFullYear()} Hagatna. All rights reserved.</div>
+      <div class="footer">&copy; ${new Date().getFullYear()} Hagatnaa. All rights reserved.</div>
     </div>
   </body>
   </html>`;
