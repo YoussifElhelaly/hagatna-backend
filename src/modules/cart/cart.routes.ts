@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   AddCartItemSchema,
   UpdateCartItemSchema,
+  ReplaceCartSchema,
   CartItemIdParamSchema,
 } from './cart.validation';
 import * as CartController from './cart.controller';
@@ -33,6 +34,13 @@ router.post(
   '/items',
   validate({ body: AddCartItemSchema }),
   CartController.addItem
+);
+
+// ─── PUT /api/v1/cart  (atomically replace the whole cart) ────────────────────
+router.put(
+  '/',
+  validate({ body: ReplaceCartSchema }),
+  CartController.replaceCart
 );
 
 // ─── PATCH /api/v1/cart/items/:itemId ────────────────────────────────────────

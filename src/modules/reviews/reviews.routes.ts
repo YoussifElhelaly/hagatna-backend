@@ -7,6 +7,7 @@ import {
   CreateReviewSchema,
   AdminCreateReviewSchema,
   UpdateReviewSchema,
+  ReplyToReviewSchema,
   ReviewIdParamSchema,
   ProductSlugParamSchema,
   ProductReviewsQuerySchema,
@@ -42,6 +43,15 @@ router.get(
   authenticate,
   authorize(ROLES.VENDOR),
   ReviewsController.getVendorReviews
+);
+
+// POST /api/v1/reviews/:id/reply  (vendor replies to a review of their own product)
+router.post(
+  '/:id/reply',
+  authenticate,
+  authorize(ROLES.VENDOR),
+  validate({ params: ReviewIdParamSchema, body: ReplyToReviewSchema }),
+  ReviewsController.replyToReview
 );
 
 // ─── Admin ────────────────────────────────────────────────────────────────────

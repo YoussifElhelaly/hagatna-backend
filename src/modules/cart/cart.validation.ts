@@ -20,6 +20,11 @@ export const UpdateCartItemSchema = z.object({
     .max(100, 'Quantity cannot exceed 100 per item'),
 });
 
+// ─── Replace Cart ─────────────────────────────────────────────────────────────
+export const ReplaceCartSchema = z.object({
+  items: z.array(AddCartItemSchema).max(100, 'Too many items'),
+});
+
 // ─── Params ───────────────────────────────────────────────────────────────────
 export const CartItemIdParamSchema = z.object({
   itemId: z.string().uuid('Invalid cart item ID'),

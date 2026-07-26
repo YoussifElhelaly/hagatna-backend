@@ -47,6 +47,11 @@ export const UpdateReviewSchema = z
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
 
+// ─── Vendor reply ─────────────────────────────────────────────────────────────
+export const ReplyToReviewSchema = z.object({
+  reply: z.string().min(1, 'Reply cannot be empty').max(1000),
+});
+
 // ─── Params ───────────────────────────────────────────────────────────────────
 export const ReviewIdParamSchema = z.object({
   id: z.string().uuid('Invalid review ID'),

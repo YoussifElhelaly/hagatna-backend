@@ -158,6 +158,15 @@ router.get(
   ProductsController.getVendorProducts
 );
 
+// GET  /api/v1/products/vendor/:id  (vendor fetches own product, any status, full detail)
+router.get(
+  '/vendor/:id',
+  authenticate,
+  authorize(ROLES.VENDOR),
+  validate({ params: ProductIdParamSchema }),
+  ProductsController.getVendorProductById
+);
+
 // PATCH /api/v1/products/bulk  (vendor bulk update own products)
 router.patch(
   '/bulk',

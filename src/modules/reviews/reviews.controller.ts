@@ -140,3 +140,19 @@ export const getVendorReviews = asyncHandler(async (req: Request, res: Response)
   );
   sendSuccess({ res, message: 'Reviews retrieved', data: reviews, meta });
 });
+
+// ─── POST /reviews/:id/reply  (vendor) ───────────────────────────────────────
+export const replyToReview = asyncHandler(async (req: Request, res: Response) => {
+  const review = await ReviewsService.replyToReview(req.user!.id, req.params.id, req.body.reply);
+  logActivity({
+    userId: req.user!.id,
+    role: 'vendor',
+    action: 'reply_to_review',
+    category: 'review',
+    entityType: 'review',
+    entityId: req.params.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+  sendSuccess({ res, message: 'Reply submitted', data: review });
+});

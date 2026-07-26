@@ -385,6 +385,21 @@ export const getVendorProducts = async (userId: string, query: VendorProductsLis
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// getVendorProductById  —  vendor fetches full detail of their own product,
+// by id, in any status (the public /:slug route requires status=active)
+// ─────────────────────────────────────────────────────────────────────────────
+export const getVendorProductById = async (userId: string, productId: string) => {
+  const vendor = await resolveVendor(userId);
+  const product = await prisma.product.findFirst({
+    where: { id: productId, deletedAt: null },
+    select: productDetailSelect,
+  });
+  if (!product) throw ApiError.notFound('Product not found');
+  if (product.vendorId !== vendor.id) throw ApiError.forbidden('You do not own this product');
+  return product;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // createProduct  —  vendor only, always starts as 'draft'
 // ─────────────────────────────────────────────────────────────────────────────
 /** Throws if the given shipping class id doesn't reference an active class */

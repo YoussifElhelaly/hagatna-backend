@@ -2,7 +2,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { ProductStatus } from '@prisma/client';
 import { prisma } from '@database/prisma/client';
 import { ApiError } from '@shared/utils/ApiError';
-import type { AddCartItemInput, UpdateCartItemInput } from './cart.types';
+import type { AddCartItemInput, UpdateCartItemInput, ReplaceCartInput } from './cart.types';
 
 // ─── Cart item select ─────────────────────────────────────────────────────────
 const cartItemSelect = {
@@ -152,6 +152,84 @@ export const addItem = async (userId: string, input: AddCartItemInput) => {
 
   // Touch cart updatedAt
   await prisma.cart.update({ where: { id: cart.id }, data: {} });
+
+  return getCart(userId);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// replaceCart  —  atomically set the cart to exactly this list of items.
+//
+// Used to sync a client-side cart to the server (e.g. at checkout). Unlike
+// addItem, quantities here are absolute, not additive, and the whole swap
+// happens in one transaction — so two concurrent syncs for the same account
+// (e.g. two open tabs/devices) can't interleave into doubled quantities the
+// way a separate delete-call-then-repost-loop could.
+// ─────────────────────────────────────────────────────────────────────────────
+export const replaceCart = async (userId: string, input: ReplaceCartInput) => {
+  // De-dupe identical (productId, variantId) lines by summing quantities.
+  const merged = new Map<string, { productId: string; variantId: string | null; quantity: number }>();
+  for (const i of input.items) {
+    const k = `${i.productId}:${i.variantId ?? ''}`;
+    const existing = merged.get(k);
+    merged.set(k, {
+      productId: i.productId,
+      variantId: i.variantId ?? null,
+      quantity: (existing?.quantity ?? 0) + i.quantity,
+    });
+  }
+  const lines = [...merged.values()];
+
+  // ── Validate every product/variant and snapshot its price ─────────────────
+  const priced: Array<{ productId: string; variantId: string | null; quantity: number; priceSnapshot: number }> = [];
+  for (const line of lines) {
+    const product = await prisma.product.findUnique({
+      where: { id: line.productId },
+      include: { vendor: { select: { status: true } } },
+    });
+    if (!product) throw ApiError.notFound('Product not found');
+    if (product.status !== ProductStatus.active) {
+      throw ApiError.badRequest(`Product "${(product.name as { en: string }).en}" is not available`);
+    }
+    if (product.vendor.status !== 'approved') {
+      throw ApiError.badRequest(`Product "${(product.name as { en: string }).en}" is not available`);
+    }
+
+    let priceSnapshot: number;
+    let availableStock: number;
+    if (line.variantId) {
+      const variant = await prisma.productVariant.findUnique({ where: { id: line.variantId } });
+      if (!variant || variant.productId !== line.productId) throw ApiError.notFound('Variant not found');
+      if (!variant.isActive) throw ApiError.badRequest('This variant is not available');
+      priceSnapshot = Number(variant.price);
+      availableStock = variant.stockQuantity;
+    } else {
+      priceSnapshot = Number(product.price);
+      availableStock = product.stockQuantity;
+    }
+    if (line.quantity > availableStock) {
+      throw ApiError.badRequest(`Only ${availableStock} unit(s) available for "${(product.name as { en: string }).en}"`);
+    }
+    priced.push({ ...line, priceSnapshot });
+  }
+
+  const cart = await getOrCreateCart(userId);
+
+  // ── Swap the cart's contents in one transaction ────────────────────────────
+  await prisma.$transaction([
+    prisma.cartItem.deleteMany({ where: { cartId: cart.id } }),
+    ...priced.map((line) =>
+      prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId: line.productId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          priceSnapshot: line.priceSnapshot,
+        },
+      })
+    ),
+    prisma.cart.update({ where: { id: cart.id }, data: {} }),
+  ]);
 
   return getCart(userId);
 };

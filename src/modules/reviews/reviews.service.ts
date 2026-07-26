@@ -19,6 +19,8 @@ const reviewSelect = {
   status: true,
   isVerifiedPurchase: true,
   helpfulCount: true,
+  vendorReply: true,
+  vendorRepliedAt: true,
   createdAt: true,
   updatedAt: true,
   user: { select: { id: true, name: true, avatar: true } },
@@ -359,4 +361,23 @@ export const getVendorReviews = async (
   ]);
 
   return { reviews, meta: buildPaginationMeta(total, page, limit) };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vendor — replyToReview
+// A vendor may reply once per review of their own products; replying again edits it.
+// ─────────────────────────────────────────────────────────────────────────────
+export const replyToReview = async (userId: string, reviewId: string, reply: string) => {
+  const vendor = await prisma.vendorProfile.findUnique({ where: { userId } });
+  if (!vendor) throw ApiError.forbidden('Vendor profile not found');
+
+  const review = await prisma.review.findFirst({ where: { id: reviewId, deletedAt: null } });
+  if (!review) throw ApiError.notFound('Review not found');
+  if (review.vendorId !== vendor.id) throw ApiError.forbidden('You do not own this review');
+
+  return prisma.review.update({
+    where: { id: reviewId },
+    data: { vendorReply: reply, vendorRepliedAt: new Date() },
+    select: reviewSelect,
+  });
 };

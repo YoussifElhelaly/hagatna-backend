@@ -758,6 +758,8 @@ model Review {
   status             ReviewStatus @default(pending)
   isVerifiedPurchase Boolean      @default(false)
   helpfulCount       Int          @default(0)
+  vendorReply        String?      @db.Text
+  vendorRepliedAt    DateTime?
   deletedAt          DateTime?                   // soft delete
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt

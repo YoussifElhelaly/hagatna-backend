@@ -27,6 +27,12 @@ export const addItem = asyncHandler(async (req: Request, res: Response) => {
   sendCreated(res, 'Item added to cart', cart);
 });
 
+// ─── PUT /cart ─────────────────────────────────────────────────────────────────
+export const replaceCart = asyncHandler(async (req: Request, res: Response) => {
+  const cart = await CartService.replaceCart(req.user!.id, req.body);
+  sendSuccess({ res, message: 'Cart synced', data: cart });
+});
+
 // ─── PATCH /cart/items/:itemId ────────────────────────────────────────────────
 export const updateItemQuantity = asyncHandler(async (req: Request, res: Response) => {
   const cart = await CartService.updateItemQuantity(

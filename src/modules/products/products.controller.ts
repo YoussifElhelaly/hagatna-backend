@@ -28,6 +28,12 @@ export const getVendorProducts = asyncHandler(async (req: Request, res: Response
   sendSuccess({ res, message: 'Your products retrieved', data: products, meta });
 });
 
+// ─── GET /products/vendor/:id  (vendor) ──────────────────────────────────────
+export const getVendorProductById = asyncHandler(async (req: Request, res: Response) => {
+  const product = await ProductsService.getVendorProductById(req.user!.id, req.params.id);
+  sendSuccess({ res, message: 'Product retrieved', data: product });
+});
+
 // ─── GET /products/:slug  (public) ───────────────────────────────────────────
 export const getProductBySlug = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req.user as { id?: string } | undefined)?.id;

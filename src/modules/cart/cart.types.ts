@@ -9,3 +9,8 @@ export interface AddCartItemInput {
 export interface UpdateCartItemInput {
   quantity: number;     // 0 = remove the item
 }
+
+// ─── Replace Cart ─────────────────────────────────────────────────────────────
+export interface ReplaceCartInput {
+  items: AddCartItemInput[];
+}
