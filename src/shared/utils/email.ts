@@ -1465,6 +1465,14 @@ export const sendCustomerOrderStatusEmail = async (
       message: 'Your order has been delivered. We hope you enjoy your purchase!',
       messageAr: 'تم توصيل طلبك. نأمل أن تستمتع بمشترياتك!',
     },
+    cancelled: {
+      en: 'Cancelled',
+      ar: 'ملغي',
+      badge: '<span class="badge badge-error">Cancelled</span>',
+      badgeAr: '<span class="badge badge-error">ملغي</span>',
+      message: 'Unfortunately, part or all of your order has been cancelled.',
+      messageAr: 'للأسف، تم إلغاء جزء من طلبك أو الطلب بالكامل.',
+    },
   };
 
   const config = statusConfig[newStatus] || {

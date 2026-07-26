@@ -36,6 +36,7 @@ export interface UpdateOrderStatusInput {
 // ─── Vendor — update a single order item status ──────────────────────────────
 export interface UpdateItemStatusInput {
   status: OrderStatus;
+  reason?: string;
 }
 
 // ─── List queries ─────────────────────────────────────────────────────────────

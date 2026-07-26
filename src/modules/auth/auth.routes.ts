@@ -54,6 +54,7 @@ router.post(
 // POST /api/v1/auth/refresh
 router.post(
   '/refresh',
+  authRateLimiter,
   validate({ body: RefreshTokenSchema }),
   AuthController.refreshToken
 );

@@ -927,15 +927,16 @@ export const updateItemStatus = async (
   if (!item) throw ApiError.notFound('Order item not found');
   if (item.vendorId !== vendor.id) throw ApiError.forbidden('Access denied');
 
-  // Vendor-allowed transitions: pending → confirmed → processing → shipped
+  // Vendor-allowed transitions: pending → confirmed → processing → shipped, or decline (→ cancelled)
   const vendorAllowed: OrderStatus[] = [
     OrderStatus.confirmed,
     OrderStatus.processing,
     OrderStatus.shipped,
+    OrderStatus.cancelled,
   ];
   if (!vendorAllowed.includes(input.status)) {
     throw ApiError.badRequest(
-      `Vendors can only set status to: confirmed, processing, or shipped`
+      `Vendors can only set status to: confirmed, processing, shipped, or cancelled`
     );
   }
   if (!isValidTransition(item.status, input.status)) {
@@ -944,10 +945,35 @@ export const updateItemStatus = async (
     );
   }
 
-  const updated = await prisma.orderItem.update({
-    where: { id: itemId },
-    data: { status: input.status },
-    select: orderItemSelect,
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.orderItem.update({
+      where: { id: itemId },
+      data: { status: input.status },
+      select: orderItemSelect,
+    });
+
+    if (input.status === OrderStatus.cancelled) {
+      // Return the reserved stock to inventory
+      if (item.variantId) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stockQuantity: { increment: item.quantity } },
+        });
+      } else {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stockQuantity: { increment: item.quantity } },
+        });
+      }
+
+      // Void the commission so a declined item is never paid out
+      await tx.vendorCommission.updateMany({
+        where: { orderItemId: itemId, status: PaymentStatus.pending },
+        data: { status: PaymentStatus.failed },
+      });
+    }
+
+    return result;
   });
 
   // Fire-and-forget email to customer

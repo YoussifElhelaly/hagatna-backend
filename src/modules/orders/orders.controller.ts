@@ -101,7 +101,7 @@ export const updateItemStatus = asyncHandler(async (req: Request, res: Response)
     category: 'order',
     entityType: 'order_item',
     entityId: req.params.itemId,
-    metadata: { status: req.body.status },
+    metadata: { status: req.body.status, reason: req.body.reason },
     ipAddress: req.ip,
     userAgent: req.get('user-agent'),
   });

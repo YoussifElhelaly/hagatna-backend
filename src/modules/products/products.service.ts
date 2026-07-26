@@ -429,7 +429,7 @@ export const createProduct = async (userId: string, input: CreateProductInput) =
       ...baseData,
       vendorId: vendor.id,
       slug,
-      status: ProductStatus.draft,   // always draft on create
+      status: ProductStatus.pending_approval,   // vendors can't set status — every new product goes straight to review
       variants: variants.length > 0 ? { create: variants } : undefined,
       images: normalizedImages.length > 0 ? { create: normalizedImages } : undefined,
       tags: tags.length > 0 ? { create: tags.map((t) => ({ tag: t })) } : undefined,

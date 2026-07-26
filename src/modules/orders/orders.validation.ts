@@ -54,6 +54,7 @@ export const UpdateOrderStatusSchema = z.object({
 // ─── Vendor — update item status ──────────────────────────────────────────────
 export const UpdateItemStatusSchema = z.object({
   status: z.nativeEnum(OrderStatus),
+  reason: z.string().max(500).optional(),
 });
 
 // ─── Params ───────────────────────────────────────────────────────────────────
