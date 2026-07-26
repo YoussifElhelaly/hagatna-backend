@@ -79,3 +79,11 @@ export const AdminReviewsQuerySchema = z.object({
   productId: z.string().uuid().optional(),
   vendorId: z.string().uuid().optional(),
 });
+
+export const VendorReviewsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  productId: z.string().uuid().optional(),
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  status: z.nativeEnum(ReviewStatus).optional(),
+});

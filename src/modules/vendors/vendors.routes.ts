@@ -11,6 +11,9 @@ import {
   VendorIdParamSchema,
   VendorSlugParamSchema,
   VendorsListQuerySchema,
+  PayoutHistoryQuerySchema,
+  VendorProductsQuerySchema,
+  VendorOrdersQuerySchema,
 } from './vendors.validation';
 import * as VendorsController from './vendors.controller';
 
@@ -61,6 +64,7 @@ router.get(
   '/me/payouts',
   authenticate,
   authorize(ROLES.VENDOR),
+  validate({ query: PayoutHistoryQuerySchema }),
   VendorsController.getMyPayoutHistory
 );
 
@@ -159,7 +163,7 @@ router.get(
   '/:id/products',
   authenticate,
   authorize(ROLES.ADMIN),
-  validate({ params: VendorIdParamSchema }),
+  validate({ params: VendorIdParamSchema, query: VendorProductsQuerySchema }),
   VendorsController.getVendorProducts
 );
 
@@ -168,7 +172,7 @@ router.get(
   '/:id/orders',
   authenticate,
   authorize(ROLES.ADMIN),
-  validate({ params: VendorIdParamSchema }),
+  validate({ params: VendorIdParamSchema, query: VendorOrdersQuerySchema }),
   VendorsController.getVendorOrders
 );
 

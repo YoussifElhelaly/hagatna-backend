@@ -12,6 +12,7 @@ import {
   ProductSlugParamSchema,
   ProductReviewsQuerySchema,
   AdminReviewsQuerySchema,
+  VendorReviewsQuerySchema,
 } from './reviews.validation';
 import * as ReviewsController from './reviews.controller';
 
@@ -42,6 +43,7 @@ router.get(
   '/vendor/me',
   authenticate,
   authorize(ROLES.VENDOR),
+  validate({ query: VendorReviewsQuerySchema }),
   ReviewsController.getVendorReviews
 );
 

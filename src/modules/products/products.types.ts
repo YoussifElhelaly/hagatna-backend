@@ -106,6 +106,7 @@ export interface AdminListProductsQuery {
   categoryId?: string;
   vendorId?: string;
   brandId?: string;
+  brand?: string;
   status?: ProductStatus;
   isFeatured?: boolean;
   search?: string;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VendorStatus } from '@prisma/client';
+import { VendorStatus, PaymentStatus } from '@prisma/client';
 
 // Reusable bilingual string schema
 const localizedStringSchema = z.object({
@@ -75,4 +75,24 @@ export const VendorsListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   status: z.nativeEnum(VendorStatus).optional(),
   search: z.string().max(100).optional(),
+});
+
+// ─── Payout History ───────────────────────────────────────────────────────────
+export const PayoutHistoryQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  status: z.nativeEnum(PaymentStatus).optional(),
+});
+
+// ─── Admin — Vendor Products / Orders (paginated) ─────────────────────────────
+export const VendorProductsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  status: z.string().optional(),
+});
+
+export const VendorOrdersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  status: z.string().optional(),
 });

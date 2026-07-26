@@ -88,6 +88,20 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
+
+// ─── Health Check (deep — checks DB + Redis) ──────────────────────────────────
+// Defined before CORS to avoid no-origin errors in production health checks.
+app.get('/health', async (_req, res) => {
+  let dbOk = false;
+  let redisOk = false;
+
+  try { await prisma.$queryRaw`SELECT 1`; dbOk = true; } catch { /* silent */ }
+  try { redisOk = (await redis.ping()) === 'PONG'; } catch { /* silent */ }
+
+  const allOk = dbOk && redisOk;
+  res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded' });
+});
+
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(mongoSanitize());
@@ -127,17 +141,6 @@ app.use('/uploads', express.static(path.join(process.cwd(), env.UPLOAD_DIR)));
 // ─── CSRF Protection ──────────────────────────────────────────────────────────
 app.use(csrfMiddleware);
 
-// ─── Health Check (deep — checks DB + Redis) ──────────────────────────────────
-app.get('/health', async (_req, res) => {
-  let dbOk = false;
-  let redisOk = false;
-
-  try { await prisma.$queryRaw`SELECT 1`; dbOk = true; } catch { /* silent */ }
-  try { redisOk = (await redis.ping()) === 'PONG'; } catch { /* silent */ }
-
-  const allOk = dbOk && redisOk;
-  res.status(allOk ? 200 : 503).json({ status: allOk ? 'ok' : 'degraded' });
-});
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 const API_PREFIX = env.API_PREFIX;
