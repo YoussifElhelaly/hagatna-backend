@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
+import { Role } from '@prisma/client';
 import {
   CreateZoneSchema,
   UpdateZoneSchema,
@@ -57,8 +59,8 @@ router.get(
 // ─── Shipments (vendor creates, vendor/admin updates, all parties view) ───────
 // IMPORTANT: static paths before :id
 router.get('/shipments/order/:orderNumber', authenticate, validate({ params: OrderNumberParamSchema }), ShippingController.getShipmentsByOrder);
-router.post('/shipments', authenticate, authorize(ROLES.VENDOR), validate({ body: CreateShipmentSchema }), ShippingController.createShipment);
-router.patch('/shipments/:id', authenticate, authorize(ROLES.VENDOR, ROLES.ADMIN), validate({ params: IdParamSchema, body: UpdateShipmentSchema }), ShippingController.updateShipment);
+router.post('/shipments', authenticate, requireApprovedVendor(), validate({ body: CreateShipmentSchema }), ShippingController.createShipment);
+router.patch('/shipments/:id', authenticate, requireApprovedVendor(Role.admin), validate({ params: IdParamSchema, body: UpdateShipmentSchema }), ShippingController.updateShipment);
 router.get('/shipments/:id', authenticate, validate({ params: IdParamSchema }), ShippingController.getShipment);
 
 export default router;

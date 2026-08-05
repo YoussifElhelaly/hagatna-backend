@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
+import { Role } from '@prisma/client';
 import {
   CreateAttributeDefinitionSchema,
   UpdateAttributeDefinitionSchema,
@@ -38,7 +40,7 @@ router.get('/product/:productId', AttributesController.getProductAttributes);
 router.put(
   '/product/:productId',
   authenticate,
-  authorize(ROLES.VENDOR, ROLES.ADMIN),
+  requireApprovedVendor(Role.admin),
   validate({ body: SetProductAttributesSchema }),
   AttributesController.setProductAttributes,
 );

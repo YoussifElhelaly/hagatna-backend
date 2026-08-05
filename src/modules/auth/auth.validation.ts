@@ -13,6 +13,8 @@ export const RegisterSchema = z.object({
   email: z.string().email('Invalid email address').toLowerCase().trim(),
   password: passwordSchema,
   phone: z.string().regex(/^(?:\+20|0)?1[0125]\d{8}$/, 'Invalid Egyptian phone number').optional(),
+  // Whitelisted to customer/vendor only — never let the client self-assign 'admin'.
+  role: z.enum(['customer', 'vendor']).optional(),
 });
 
 export const VerifyEmailSchema = z.object({

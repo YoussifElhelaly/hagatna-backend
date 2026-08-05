@@ -99,6 +99,23 @@ describe('AuthService.register', () => {
     // In test env (NODE_ENV=test), no devOtp returned — only in development
     expect(result).toEqual({});
   });
+
+  it('resends a fresh OTP instead of blocking when the existing account was never verified', async () => {
+    mockUser.findUnique.mockResolvedValueOnce({ ...fakeUser, isVerified: false });
+    mockUser.update.mockResolvedValueOnce({ ...fakeUser, isVerified: false });
+    mockRedis.set.mockResolvedValueOnce('OK');
+
+    const result = await AuthService.register({
+      name:     'Ahmed',
+      email:    'ahmed@test.com',
+      password: 'Pass1234!',
+    });
+
+    expect(mockUser.update).toHaveBeenCalledOnce();
+    expect(mockUser.create).not.toHaveBeenCalled();
+    expect(mockRedis.set).toHaveBeenCalledOnce();
+    expect(result).toEqual({});
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

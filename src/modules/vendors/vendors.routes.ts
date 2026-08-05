@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
 import {
@@ -55,7 +56,7 @@ router.get(
 router.get(
   '/me/earnings',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   VendorsController.getMyEarnings
 );
 
@@ -63,7 +64,7 @@ router.get(
 router.get(
   '/me/payouts',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ query: PayoutHistoryQuerySchema }),
   VendorsController.getMyPayoutHistory
 );
@@ -72,7 +73,7 @@ router.get(
 router.get(
   '/me/analytics/overview',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   VendorsController.getMyAnalyticsOverview
 );
 
@@ -80,7 +81,7 @@ router.get(
 router.get(
   '/me/analytics/revenue',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   VendorsController.getMyAnalyticsRevenue
 );
 
@@ -88,7 +89,7 @@ router.get(
 router.get(
   '/me/analytics/top-products',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   VendorsController.getMyTopProducts
 );
 

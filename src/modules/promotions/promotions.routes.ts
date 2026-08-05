@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
 import {
@@ -34,7 +35,7 @@ router.get(
 router.get(
   '/vendor',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ query: PromotionsListQuerySchema }),
   PromotionsController.listVendorPromotions
 );
@@ -43,7 +44,7 @@ router.get(
 router.post(
   '/vendor',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ body: CreatePromotionSchema }),
   PromotionsController.createVendorPromotion
 );
@@ -52,7 +53,7 @@ router.post(
 router.get(
   '/vendor/:id',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: PromotionIdParamSchema }),
   PromotionsController.getVendorPromotion
 );
@@ -61,7 +62,7 @@ router.get(
 router.patch(
   '/vendor/:id',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: PromotionIdParamSchema, body: UpdatePromotionSchema }),
   PromotionsController.updateVendorPromotion
 );
@@ -70,7 +71,7 @@ router.patch(
 router.delete(
   '/vendor/:id',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: PromotionIdParamSchema }),
   PromotionsController.deleteVendorPromotion
 );

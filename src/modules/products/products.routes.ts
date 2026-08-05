@@ -2,8 +2,10 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
+import { Role } from '@prisma/client';
 import {
   ProductsListQuerySchema,
   VendorProductsListQuerySchema,
@@ -153,7 +155,7 @@ router.patch(
 router.get(
   '/vendor/me',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ query: VendorProductsListQuerySchema }),
   ProductsController.getVendorProducts
 );
@@ -162,7 +164,7 @@ router.get(
 router.get(
   '/vendor/:id',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductIdParamSchema }),
   ProductsController.getVendorProductById
 );
@@ -171,7 +173,7 @@ router.get(
 router.patch(
   '/bulk',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ body: BulkUpdateProductsSchema }),
   ProductsController.bulkUpdateProducts
 );
@@ -180,7 +182,7 @@ router.patch(
 router.post(
   '/',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ body: CreateProductSchema }),
   ProductsController.createProduct
 );
@@ -189,7 +191,7 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductIdParamSchema, body: UpdateProductSchema }),
   ProductsController.updateProduct
 );
@@ -199,7 +201,7 @@ router.patch(
 router.patch(
   '/:id/status',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductIdParamSchema, body: UpdateProductStatusSchema }),
   ProductsController.updateProductStatus
 );
@@ -208,7 +210,7 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  authorize(ROLES.VENDOR, ROLES.ADMIN),
+  requireApprovedVendor(Role.admin),
   validate({ params: ProductIdParamSchema }),
   ProductsController.deleteProduct
 );
@@ -219,7 +221,7 @@ router.delete(
 router.post(
   '/:id/variants',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductIdParamSchema }),
   ProductsController.addVariant
 );
@@ -228,7 +230,7 @@ router.post(
 router.patch(
   '/:id/variants/:variantId',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductVariantParamSchema, body: UpdateVariantSchema }),
   ProductsController.updateVariant
 );
@@ -237,7 +239,7 @@ router.patch(
 router.delete(
   '/:id/variants/:variantId',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductVariantParamSchema }),
   ProductsController.deleteVariant
 );
@@ -246,7 +248,7 @@ router.delete(
 router.put(
   '/:id/images',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ProductIdParamSchema, body: SetProductImagesSchema }),
   ProductsController.setProductImages
 );

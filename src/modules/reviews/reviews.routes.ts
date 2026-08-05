@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
 import {
@@ -42,7 +43,7 @@ router.get(
 router.get(
   '/vendor/me',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ query: VendorReviewsQuerySchema }),
   ReviewsController.getVendorReviews
 );
@@ -51,7 +52,7 @@ router.get(
 router.post(
   '/:id/reply',
   authenticate,
-  authorize(ROLES.VENDOR),
+  requireApprovedVendor(),
   validate({ params: ReviewIdParamSchema, body: ReplyToReviewSchema }),
   ReviewsController.replyToReview
 );

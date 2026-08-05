@@ -98,19 +98,32 @@ const storeRefreshToken = async (userId: string, refreshToken: string): Promise<
 // ─────────────────────────────────────────────────────────────────────────────
 export const register = async (input: RegisterInput): Promise<{ devOtp?: string }> => {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
-  if (existing) throw ApiError.conflict('Email already registered');
+  if (existing?.isVerified) throw ApiError.conflict('Email already registered');
 
   const passwordHash = await hashPassword(input.password);
+  // 'role' is validated to only ever be 'customer' or 'vendor' — the vendor app
+  // sends role: 'vendor' so applicants are identifiable as vendors from signup;
+  // actual selling privileges still require admin approval, enforced separately
+  // by requireApprovedVendor on the vendor-only endpoints.
+  const role = input.role === 'vendor' ? Role.vendor : Role.customer;
 
-  const user = await prisma.user.create({
-    data: {
-      name: input.name,
-      email: input.email,
-      passwordHash,
-      role: Role.customer,
-      phone: input.phone,
-    },
-  });
+  // An unverified account from a previous attempt (e.g. the OTP email never
+  // arrived) is reused instead of blocked, so re-submitting the form is how
+  // a stuck user gets back into the OTP flow with a fresh code.
+  const user = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: { name: input.name, passwordHash, phone: input.phone, role },
+      })
+    : await prisma.user.create({
+        data: {
+          name: input.name,
+          email: input.email,
+          passwordHash,
+          role,
+          phone: input.phone,
+        },
+      });
 
   // Generate OTP and store its hash in Redis
   const otp = generateOTP();
@@ -181,7 +194,11 @@ export const login = async (input: LoginInput): Promise<AuthResponse> => {
   const isMatch = await comparePassword(input.password, user.passwordHash);
   if (!isMatch) throw ApiError.unauthorized('Invalid email or password');
 
-  if (!user.isVerified) throw ApiError.badRequest('Please verify your email before logging in');
+  if (!user.isVerified) {
+    throw ApiError.badRequest('Please verify your email before logging in', [
+      { code: 'EMAIL_NOT_VERIFIED' },
+    ]);
+  }
   if (!user.isActive) throw ApiError.forbidden('Account is suspended. Contact support.');
 
   const tokens = buildTokens(user);

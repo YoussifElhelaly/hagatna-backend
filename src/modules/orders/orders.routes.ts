@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { idempotency } from '@shared/middlewares/idempotency';
 import { ROLES } from '@shared/constants/roles';
@@ -31,9 +32,9 @@ router.use(authenticate);
 
 // ─── Vendor ───────────────────────────────────────────────────────────────────
 
-router.get('/vendor/items', authorize(ROLES.VENDOR), validate({ query: VendorItemsQuerySchema }), OrdersController.getVendorItems);
-router.get('/vendor/:orderNumber', authorize(ROLES.VENDOR), validate({ params: OrderNumberParamSchema }), OrdersController.getVendorOrderDetail);
-router.patch('/vendor/items/:itemId/status', authorize(ROLES.VENDOR), validate({ params: OrderItemIdParamSchema, body: UpdateItemStatusSchema }), OrdersController.updateItemStatus);
+router.get('/vendor/items', requireApprovedVendor(), validate({ query: VendorItemsQuerySchema }), OrdersController.getVendorItems);
+router.get('/vendor/:orderNumber', requireApprovedVendor(), validate({ params: OrderNumberParamSchema }), OrdersController.getVendorOrderDetail);
+router.patch('/vendor/items/:itemId/status', requireApprovedVendor(), validate({ params: OrderItemIdParamSchema, body: UpdateItemStatusSchema }), OrdersController.updateItemStatus);
 
 // ─── Admin — Returns (static paths, before /:orderNumber) ────────────────────
 

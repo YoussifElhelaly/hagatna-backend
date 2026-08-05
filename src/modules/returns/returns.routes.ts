@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '@shared/middlewares/authenticate';
 import { authorize } from '@shared/middlewares/authorize';
+import { requireApprovedVendor } from '@shared/middlewares/requireApprovedVendor';
 import { validate } from '@shared/middlewares/validate';
 import { ROLES } from '@shared/constants/roles';
 import {
@@ -39,7 +40,7 @@ router.use('/admin', admin);
 // ─── Vendor routes — MUST be mounted before /:id to avoid route collision ──────
 // GET    /api/v1/returns/vendor        → list returns for vendor's orders
 const vendor = Router();
-vendor.use(authorize(ROLES.VENDOR));
+vendor.use(requireApprovedVendor());
 
 vendor.get('/', vendorListReturns);
 
