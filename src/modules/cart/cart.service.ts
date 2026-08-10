@@ -161,9 +161,16 @@ export const addItem = async (userId: string, input: AddCartItemInput) => {
 //
 // Used to sync a client-side cart to the server (e.g. at checkout). Unlike
 // addItem, quantities here are absolute, not additive, and the whole swap
-// happens in one transaction — so two concurrent syncs for the same account
-// (e.g. two open tabs/devices) can't interleave into doubled quantities the
-// way a separate delete-call-then-repost-loop could.
+// happens in one transaction. The cart row is touched FIRST so it picks up a
+// row lock before the delete+insert: two concurrent syncs for the same
+// account (e.g. React effects double-firing, two open tabs) then run one
+// after the other instead of racing. Without that lock, both transactions'
+// deletes can each see zero existing rows (under READ COMMITTED, an unlocked
+// DELETE only blocks on rows it actually matches) and both insert — and
+// since variantId is nullable, the (cartId, productId, variantId) unique
+// constraint doesn't catch it either, because SQL treats every NULL as
+// distinct. The result was duplicate cart_item rows for the same product,
+// silently doubling the cart total.
 // ─────────────────────────────────────────────────────────────────────────────
 export const replaceCart = async (userId: string, input: ReplaceCartInput) => {
   // De-dupe identical (productId, variantId) lines by summing quantities.
@@ -215,7 +222,12 @@ export const replaceCart = async (userId: string, input: ReplaceCartInput) => {
   const cart = await getOrCreateCart(userId);
 
   // ── Swap the cart's contents in one transaction ────────────────────────────
+  // The touch-update runs FIRST so it grabs a row lock on the cart before the
+  // delete+insert — see the comment above replaceCart for why that's required.
+  // It must set a real field: an empty `data: {}` makes Prisma skip the UPDATE
+  // and issue a plain SELECT instead, which takes no lock at all.
   await prisma.$transaction([
+    prisma.cart.update({ where: { id: cart.id }, data: { updatedAt: new Date() } }),
     prisma.cartItem.deleteMany({ where: { cartId: cart.id } }),
     ...priced.map((line) =>
       prisma.cartItem.create({
@@ -228,7 +240,6 @@ export const replaceCart = async (userId: string, input: ReplaceCartInput) => {
         },
       })
     ),
-    prisma.cart.update({ where: { id: cart.id }, data: {} }),
   ]);
 
   return getCart(userId);
