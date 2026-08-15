@@ -992,10 +992,11 @@ export const updateItemStatus = async (
 // Admin — listAllOrders
 // ─────────────────────────────────────────────────────────────────────────────
 export const listAllOrders = async (query: AdminOrdersQuery) => {
-  const { page = 1, limit = 20, status, paymentStatus, search, from, to } = query;
+  const { page = 1, limit = 20, status, paymentStatus, search, from, to, userId } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.OrderWhereInput = {
+    ...(userId && { userId }),
     ...(status && { status }),
     ...(paymentStatus && { paymentStatus }),
     ...(from || to

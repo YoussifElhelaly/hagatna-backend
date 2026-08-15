@@ -60,4 +60,5 @@ export interface AdminOrdersQuery {
   search?: string;   // order number or customer email
   from?: string;     // ISO date string
   to?: string;       // ISO date string
+  userId?: string;
 }

@@ -87,6 +87,7 @@ export const AdminOrdersQuerySchema = z.object({
   search: z.string().max(100).optional(),
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),
+  userId: z.string().uuid().optional(),
 });
 
 // ─── Returns / Refunds ────────────────────────────────────────────────────────
