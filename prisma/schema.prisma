@@ -1172,19 +1172,34 @@ model PlatformSettings {
 //  BANNERS (Homepage Carousel)
 // ═══════════════════════════════════════════════════════
 
+enum BannerButtonStyle {
+  primary
+  outline
+}
+
+enum BannerTextAlign {
+  right
+  center
+  left
+}
+
 model Banner {
-  id            String    @id @default(uuid())
-  title         Json      @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
-  description   Json      @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
-  imageUrl      String    @db.VarChar(500)
-  imagePublicId String    @db.VarChar(200)
-  linkUrl       String?   @db.VarChar(500)
-  order         Int       @default(0)
-  isActive      Boolean   @default(true)
+  id            String            @id @default(uuid())
+  title         Json              @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
+  description   Json              @default("{\"en\": \"\", \"ar\": \"\"}")   // LocalizedString
+  imageUrl      String            @db.VarChar(500)
+  imagePublicId String            @db.VarChar(200)
+  linkUrl       String?           @db.VarChar(500)
+  showButton    Boolean           @default(true)
+  buttonText    Json?             // LocalizedString, falls back to a default "Shop now" translation when null
+  buttonStyle   BannerButtonStyle @default(primary)
+  textAlign     BannerTextAlign   @default(right)
+  order         Int               @default(0)
+  isActive      Boolean           @default(true)
   startDate     DateTime?
   endDate       DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@index([isActive, order])
   @@map("banners")

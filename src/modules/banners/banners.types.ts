@@ -3,12 +3,19 @@ export interface LocalizedString {
   ar: string;
 }
 
+export type BannerButtonStyle = 'primary' | 'outline';
+export type BannerTextAlign = 'right' | 'center' | 'left';
+
 export interface BannerData {
   title: LocalizedString;
   description: LocalizedString;
   imageUrl: string;
   imagePublicId: string;
   linkUrl?: string;
+  showButton?: boolean;
+  buttonText?: LocalizedString;
+  buttonStyle?: BannerButtonStyle;
+  textAlign?: BannerTextAlign;
   order?: number;
   isActive?: boolean;
   startDate?: string | Date;
@@ -21,6 +28,10 @@ export interface UpdateBannerInput {
   imageUrl?: string;
   imagePublicId?: string;
   linkUrl?: string;
+  showButton?: boolean;
+  buttonText?: LocalizedString;
+  buttonStyle?: BannerButtonStyle;
+  textAlign?: BannerTextAlign;
   order?: number;
   isActive?: boolean;
   startDate?: string | Date;
