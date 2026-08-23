@@ -7,6 +7,7 @@ import { generateUniqueSlug } from '@shared/utils/generateSlug';
 import { buildPaginationMeta } from '@shared/utils/ApiResponse';
 import { notify } from '@modules/notifications/notifications.service';
 import { getDescendantIds } from '@shared/utils/categoryTree';
+import { revalidateFrontendPaths } from '@shared/utils/revalidateFrontend';
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -184,6 +185,17 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     brandId = matched?.id ?? '__no_match__';
   }
 
+  let searchIds: string[] | undefined;
+  if (search) {
+    const rows = await prisma.$queryRaw<{id: string}[]>`
+      SELECT id FROM "Product"
+      WHERE (name->>'en') ILIKE ${'%' + search + '%'}
+         OR (name->>'ar') ILIKE ${'%' + search + '%'}
+         OR slug ILIKE ${'%' + search + '%'}
+    `;
+    searchIds = rows.map((r) => r.id);
+  }
+
   // Build one AND condition per attribute filter so a product must satisfy ALL
   const attrConditions: Prisma.ProductWhereInput[] =
     attrs && Object.keys(attrs).length > 0
@@ -205,6 +217,7 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     ...(vendorSlug && { vendor: { storeSlug: vendorSlug } }),
     ...(brandId && { brandId }),
     ...(isFeatured !== undefined && { isFeatured }),
+    ...(searchIds && { id: { in: searchIds } }),
     // onSale: only products whose comparePrice is set AND greater than price
     ...(onSale && { comparePrice: { gt: prisma.product.fields.price } }),
     ...(minPrice !== undefined || maxPrice !== undefined
@@ -215,13 +228,6 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
           },
         }
       : {}),
-    ...(search && {
-      OR: [
-        { name: { path: ['en'], string_contains: search } },
-        { name: { path: ['ar'], string_contains: search } },
-        { slug: { contains: search, mode: 'insensitive' } },
-      ],
-    }),
     ...(tag && {
       tags: { some: { tag: { equals: tag, mode: 'insensitive' } } },
     }),
@@ -482,6 +488,10 @@ export const updateProduct = async (
 
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
+  
+  if (product.status === ProductStatus.active) {
+    revalidateFrontendPaths(['/ar/products/' + slug, '/en/products/' + slug, '/sitemap.xml']).catch(() => {});
+  }
   return product;
 };
 
@@ -543,6 +553,7 @@ export const deleteProduct = async (
   });
 
   await invalidateProductCache(product.slug);
+  revalidateFrontendPaths(['/ar/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -567,6 +578,8 @@ export const bulkUpdateProducts = async (
 
   const { tags, ...data } = update as { tags?: string[]; [k: string]: unknown };
 
+  const products = await prisma.product.findMany({ where: { id: { in: ids } }, select: { slug: true } });
+
   await prisma.$transaction(async (tx) => {
     if (Object.keys(data).length > 0) {
       await tx.product.updateMany({ where, data });
@@ -581,6 +594,13 @@ export const bulkUpdateProducts = async (
       }
     }
   });
+
+  const pathsToRevalidate = ['/sitemap.xml'];
+  for (const p of products) {
+    pathsToRevalidate.push(`/ar/products/${p.slug}`);
+    pathsToRevalidate.push(`/en/products/${p.slug}`);
+  }
+  revalidateFrontendPaths(pathsToRevalidate).catch(() => {});
 
   return { updated: ids.length };
 };
@@ -611,6 +631,7 @@ export const approveProduct = async (productId: string) => {
   );
 
   await invalidateProductCache(product.slug);
+  revalidateFrontendPaths(['/ar/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
   return updated;
 };
 
@@ -641,6 +662,7 @@ export const rejectProduct = async (productId: string, approvalNote: string) => 
   );
 
   await invalidateProductCache(product.slug);
+  revalidateFrontendPaths(['/ar/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
   return updated;
 };
 
@@ -800,7 +822,22 @@ export const adminUpdateProduct = async (
 
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
+  
+  if (product.status === ProductStatus.active) {
+    revalidateFrontendPaths(['/ar/products/' + slug, '/en/products/' + slug, '/sitemap.xml']).catch(() => {});
+  }
   return product;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getSitemapEntries  —  SEO sitemap
+// ─────────────────────────────────────────────────────────────────────────────
+export const getSitemapEntries = async () => {
+  return prisma.product.findMany({
+    where: { status: 'active', deletedAt: null },
+    select: { slug: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+  });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -818,6 +855,17 @@ export const adminListProducts = async (query: AdminListProductsQuery) => {
     categoryIds = [categoryId, ...descendants];
   }
 
+  let searchIds: string[] | undefined;
+  if (search) {
+    const rows = await prisma.$queryRaw<{id: string}[]>`
+      SELECT id FROM "Product"
+      WHERE (name->>'en') ILIKE ${'%' + search + '%'}
+         OR (name->>'ar') ILIKE ${'%' + search + '%'}
+         OR slug ILIKE ${'%' + search + '%'}
+    `;
+    searchIds = rows.map((r) => r.id);
+  }
+
   const where: Prisma.ProductWhereInput = {
     deletedAt: null, // Always exclude deleted products
     ...(status && { status }),
@@ -825,13 +873,7 @@ export const adminListProducts = async (query: AdminListProductsQuery) => {
     ...(brandId && { brandId }),
     ...(vendorId && { vendorId }),
     ...(isFeatured !== undefined && { isFeatured }),
-    ...(search && {
-      OR: [
-        { name: { path: ['en'], string_contains: search } },
-        { name: { path: ['ar'], string_contains: search } },
-        { slug: { contains: search, mode: 'insensitive' } },
-      ],
-    }),
+    ...(searchIds && { id: { in: searchIds } }),
   };
 
   const orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };

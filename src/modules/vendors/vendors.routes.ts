@@ -179,7 +179,11 @@ router.get(
 
 // ─── Public — dynamic param LAST to avoid shadowing static paths ──────────────
 
+// GET  /api/v1/vendors/sitemap (SEO sitemap)
+router.get('/sitemap', VendorsController.getSitemapEntries);
+
 // GET  /api/v1/vendors/store/:slug  (public store page)
+
 router.get(
   '/store/:slug',
   validate({ params: VendorSlugParamSchema }),

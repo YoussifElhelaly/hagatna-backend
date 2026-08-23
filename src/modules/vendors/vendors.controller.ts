@@ -142,3 +142,9 @@ export const getMyTopProducts = asyncHandler(async (req: Request, res: Response)
   const data  = await VendorsService.getMyTopProducts(req.user!.id, limit);
   sendSuccess({ res, message: 'Top products retrieved', data });
 });
+
+// ─── GET /vendors/sitemap  (public) ───────────────────────────────────────────
+export const getSitemapEntries = asyncHandler(async (req: Request, res: Response) => {
+  const entries = await VendorsService.getSitemapEntries();
+  sendSuccess({ res, message: 'Sitemap entries retrieved', data: entries });
+});

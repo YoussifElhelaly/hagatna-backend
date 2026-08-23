@@ -19,9 +19,14 @@ const router = Router();
 // Returns the full active category tree (2 levels deep), Redis-cached 1 hour
 router.get('/', CategoriesController.listCategories);
 
+// GET  /api/v1/categories/sitemap
+// SEO sitemap entries
+router.get('/sitemap', CategoriesController.getSitemapEntries);
+
 // GET  /api/v1/categories/:slug
 // Single category with parent, children, and active product count
 // NOTE: declared before /:id admin routes — no conflict since slug uses string and id uses uuid validation
+
 router.get(
   '/:slug',
   validate({ params: CategorySlugParamSchema }),

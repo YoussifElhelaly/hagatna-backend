@@ -37,6 +37,8 @@ export interface CreateProductInput {
   categoryId: string;
   name: LocalizedString;
   description?: LocalizedString;
+  metaTitle?: LocalizedString;
+  metaDescription?: LocalizedString;
   price: number;
   comparePrice?: number;
   costPrice?: number;
@@ -56,6 +58,8 @@ export interface UpdateProductInput {
   categoryId?: string;
   name?: LocalizedString;
   description?: LocalizedString;
+  metaTitle?: LocalizedString;
+  metaDescription?: LocalizedString;
   price?: number;
   comparePrice?: number;
   costPrice?: number;

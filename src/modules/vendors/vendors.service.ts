@@ -732,3 +732,16 @@ export const getMyTopProducts = async (userId: string, limit = 10) => {
     totalRevenue: Number(r._sum.subtotal ?? 0),
   }));
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEO Sitemap
+// ─────────────────────────────────────────────────────────────────────────────
+export const getSitemapEntries = async () => {
+  const vendors = await prisma.vendorProfile.findMany({
+    where: { status: 'approved' },
+    select: { storeSlug: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+  return vendors.map(v => ({ slug: v.storeSlug, updatedAt: v.updatedAt }));
+};
+

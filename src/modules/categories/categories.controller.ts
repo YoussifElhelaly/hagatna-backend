@@ -32,3 +32,9 @@ export const deleteCategory = asyncHandler(async (req: Request, res: Response) =
   await CategoriesService.deleteCategory(req.params.id);
   sendSuccess({ res, message: 'Category deleted successfully', data: null });
 });
+
+// ─── GET /categories/sitemap  (public) ────────────────────────────────────────
+export const getSitemapEntries = asyncHandler(async (req: Request, res: Response) => {
+  const entries = await CategoriesService.getSitemapEntries();
+  sendSuccess({ res, message: 'Sitemap entries retrieved', data: entries });
+});

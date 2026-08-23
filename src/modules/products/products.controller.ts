@@ -238,3 +238,9 @@ export const importProducts = asyncHandler(async (req: Request, res: Response) =
   );
   sendSuccess({ res, message: 'Products import completed', data: result });
 });
+
+// ─── GET /products/sitemap  (public) ──────────────────────────────────────────
+export const getSitemapEntries = asyncHandler(async (req: Request, res: Response) => {
+  const entries = await ProductsService.getSitemapEntries();
+  sendSuccess({ res, message: 'Sitemap entries retrieved', data: entries });
+});

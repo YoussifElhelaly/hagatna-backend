@@ -46,6 +46,9 @@ router.get(
 // GET  /api/v1/products/featured
 router.get('/featured', ProductsController.getFeaturedProducts);
 
+// GET  /api/v1/products/sitemap
+router.get('/sitemap', ProductsController.getSitemapEntries);
+
 // ─── Admin — create / update any product ─────────────────────────────────────
 
 // GET /api/v1/products/admin (admin lists all products)

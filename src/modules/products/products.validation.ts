@@ -70,6 +70,8 @@ export const CreateProductSchema = z.object({
     { message: 'Product name must be between 2 and 200 characters' }
   ),
   description: optionalLocalizedStringSchema,
+  metaTitle: optionalLocalizedStringSchema,
+  metaDescription: optionalLocalizedStringSchema,
   price: positiveDecimal,
   comparePrice: positiveDecimal.optional(),
   costPrice: positiveDecimal.optional(),
@@ -93,6 +95,8 @@ export const UpdateProductSchema = z
     categoryId: z.string().uuid('Invalid category ID').optional(),
     name: optionalLocalizedStringSchema,
     description: optionalLocalizedStringSchema,
+    metaTitle: optionalLocalizedStringSchema,
+    metaDescription: optionalLocalizedStringSchema,
     price: positiveDecimal.optional(),
     comparePrice: positiveDecimal.nullable().optional(),
     costPrice: positiveDecimal.nullable().optional(),

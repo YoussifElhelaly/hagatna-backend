@@ -179,3 +179,14 @@ export const deleteCategory = async (categoryId: string) => {
   // Invalidate tree cache
   await redis.del(RedisKeys.cache.categories());
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getSitemapEntries  —  SEO sitemap
+// ─────────────────────────────────────────────────────────────────────────────
+export const getSitemapEntries = async () => {
+  return prisma.category.findMany({
+    where: { isActive: true, deletedAt: null },
+    select: { slug: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+};
