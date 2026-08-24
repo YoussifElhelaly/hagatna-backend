@@ -72,4 +72,9 @@ export const env = cleanEnv(process.env, {
 
   // Sentry — optional, error tracking disabled when not set
   SENTRY_DSN: str({ default: '' }),
+
+  // SEO — on-demand ISR revalidation call to the storefront + optional IndexNow ping.
+  // Leave both empty to disable (revalidateFrontendPaths becomes a no-op).
+  REVALIDATE_SECRET: str({ default: '' }),
+  INDEXNOW_KEY: str({ default: '' }),
 });
