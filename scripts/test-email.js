@@ -1,6 +1,6 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import nodemailer from 'nodemailer';
+const dotenv = require('dotenv');
+const path = require('path');
+const nodemailer = require('nodemailer');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -12,6 +12,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 const TO = process.argv[2] || process.env.TEST_EMAIL || 'youssif.elhelaly@gmail.com';
@@ -25,7 +28,7 @@ const html = `
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     body { margin: 0; padding: 0; background: #f4f6f8; font-family: 'Tajawal', 'Segoe UI', sans-serif; }
-    .wrapper { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .wrapper { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .header { background: linear-gradient(135deg, #1a1f3a 0%, #2d3561 100%); padding: 32px 24px; text-align: center; }
     .logo { font-family: 'Cairo', sans-serif; font-size: 32px; font-weight: 800; color: #ffffff; }
     .logo span { color: #ff6b35; }
@@ -70,13 +73,15 @@ async function main() {
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: TO,
-      subject: 'Hagatna - SMTP Test Email',
+      subject: 'Hagatna - SMTP Test Email & Template',
       html,
     });
-    console.log('Message sent! ID:', info.messageId);
-    console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
+    console.log('✅ Message sent successfully!');
+    console.log('Message ID:', info.messageId);
+    console.log('Accepted:', info.accepted);
+    console.log('Response:', info.response);
   } catch (err) {
-    console.error('Failed to send email:', err);
+    console.error('❌ Failed to send email:', err);
     process.exit(1);
   }
 }

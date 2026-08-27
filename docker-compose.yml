@@ -119,6 +119,24 @@ services:
     profiles:
       - backup
 
+  # ─── Nginx Web Server & Reverse Proxy ─────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: hagatna_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot
+      - /opt/images:/var/www/images:ro
+    depends_on:
+      - backend
+    networks:
+      - hagatna_network
+
 volumes:
   postgres_data:
     name: hagatna_postgres_data
@@ -130,8 +148,11 @@ volumes:
     name: hagatna_backend_uploads
   db_backups:
     name: hagatna_db_backups
+  certbot_www:
+    name: hagatna_certbot_www
 
 networks:
   hagatna_network:
     name: hagatna_network
     driver: bridge
+

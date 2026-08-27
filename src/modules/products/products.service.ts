@@ -1149,6 +1149,11 @@ export const bulkImportProducts = async (
       });
       results.success++;
     } catch (err: any) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const field = (err.meta?.target as string[])?.join(', ') ?? 'field';
+        results.errors.push({ row: rowNum, error: `${field} already exists` });
+        continue;
+      }
       results.errors.push({ row: rowNum, error: err.message || 'Unknown error' });
     }
   }
