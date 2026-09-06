@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ProductStatus } from '@prisma/client';
 import { imageUrlSchema } from '@shared/validation/imageUrl';
+import { optionalDescriptionSchema } from '@shared/validation/description';
 
 // ─── Reusable ─────────────────────────────────────────────────────────────────
 const localizedStringSchema = z.object({
@@ -69,7 +70,7 @@ export const CreateProductSchema = z.object({
     (v) => v.en.length >= 2 && v.en.length <= 200,
     { message: 'Product name must be between 2 and 200 characters' }
   ),
-  description: optionalLocalizedStringSchema,
+  description: optionalDescriptionSchema,
   metaTitle: optionalLocalizedStringSchema,
   metaDescription: optionalLocalizedStringSchema,
   price: positiveDecimal,
@@ -94,7 +95,7 @@ export const UpdateProductSchema = z
   .object({
     categoryId: z.string().uuid('Invalid category ID').optional(),
     name: optionalLocalizedStringSchema,
-    description: optionalLocalizedStringSchema,
+    description: optionalDescriptionSchema,
     metaTitle: optionalLocalizedStringSchema,
     metaDescription: optionalLocalizedStringSchema,
     price: positiveDecimal.optional(),
@@ -144,7 +145,7 @@ export const AdminCreateProductSchema = z.object({
   status: z.nativeEnum(ProductStatus).optional().default(ProductStatus.draft),
   categoryId: z.string().uuid('Invalid category ID'),
   name: z.object({ en: z.string().min(2).max(200), ar: z.string().min(1) }),
-  description: z.object({ en: z.string().min(1), ar: z.string().min(1) }).optional(),
+  description: optionalDescriptionSchema,
   price: z.number().positive().multipleOf(0.01),
   comparePrice: z.number().positive().multipleOf(0.01).optional(),
   costPrice: z.number().positive().multipleOf(0.01).optional(),
@@ -167,7 +168,7 @@ export const AdminUpdateProductSchema = z
   .object({
     categoryId: z.string().uuid('Invalid category ID').optional(),
     name: z.object({ en: z.string().min(1), ar: z.string().min(1) }).optional(),
-    description: z.object({ en: z.string().min(1), ar: z.string().min(1) }).optional(),
+    description: optionalDescriptionSchema,
     price: z.number().positive().multipleOf(0.01).optional(),
     comparePrice: z.number().positive().multipleOf(0.01).nullable().optional(),
     costPrice: z.number().positive().multipleOf(0.01).nullable().optional(),

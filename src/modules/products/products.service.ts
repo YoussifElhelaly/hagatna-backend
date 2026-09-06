@@ -8,6 +8,7 @@ import { buildPaginationMeta } from '@shared/utils/ApiResponse';
 import { notify } from '@modules/notifications/notifications.service';
 import { getDescendantIds } from '@shared/utils/categoryTree';
 import { revalidateFrontendPaths } from '@shared/utils/revalidateFrontend';
+import { sanitizeDescriptionHtml } from '@shared/validation/description';
 import type {
   CreateProductInput,
   UpdateProductInput,
@@ -1138,7 +1139,10 @@ export const bulkImportProducts = async (
           categoryId,
           brandId: brandId || undefined,
           name: { en: nameEn, ar: nameAr },
-          description: { en: row['Description (EN)'] || '', ar: row['Description (AR)'] || '' },
+          description: {
+            en: sanitizeDescriptionHtml(row['Description (EN)'] || ''),
+            ar: sanitizeDescriptionHtml(row['Description (AR)'] || ''),
+          },
           price,
           comparePrice: isNaN(comparePrice!) ? undefined : comparePrice,
           stockQuantity,
