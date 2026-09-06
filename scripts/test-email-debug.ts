@@ -4,7 +4,7 @@ import nodemailer from 'nodemailer';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const TO = 'youssifelhelaly@shinefy.co';
+const TO = process.argv[2] || process.env.TEST_EMAIL || 'youssif.elhelaly@gmail.com';
 
 async function main() {
   // 1. Verify SMTP connection

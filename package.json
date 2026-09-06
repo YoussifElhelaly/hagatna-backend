@@ -20,6 +20,8 @@
     "db:seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
+    "scrape:images": "ts-node -r tsconfig-paths/register scripts/scrapeProductImagesSerper.ts",
+    "images:localize": "ts-node -r tsconfig-paths/register scripts/localizeProductImages.ts",
     "prepare": "husky install"
   },
   "dependencies": {
