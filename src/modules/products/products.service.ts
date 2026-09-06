@@ -189,7 +189,7 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
   let searchIds: string[] | undefined;
   if (search) {
     const rows = await prisma.$queryRaw<{id: string}[]>`
-      SELECT id FROM "Product"
+      SELECT id FROM "products"
       WHERE (name->>'en') ILIKE ${'%' + search + '%'}
          OR (name->>'ar') ILIKE ${'%' + search + '%'}
          OR slug ILIKE ${'%' + search + '%'}
@@ -859,7 +859,7 @@ export const adminListProducts = async (query: AdminListProductsQuery) => {
   let searchIds: string[] | undefined;
   if (search) {
     const rows = await prisma.$queryRaw<{id: string}[]>`
-      SELECT id FROM "Product"
+      SELECT id FROM "products"
       WHERE (name->>'en') ILIKE ${'%' + search + '%'}
          OR (name->>'ar') ILIKE ${'%' + search + '%'}
          OR slug ILIKE ${'%' + search + '%'}
