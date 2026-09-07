@@ -1,5 +1,6 @@
 import { ShipmentStatus } from '@prisma/client';
 import { prisma } from '@database/prisma/client';
+import { redis, RedisKeys } from '@database/redis/client';
 import { ApiError } from '@shared/utils/ApiError';
 import { buildPaginationMeta } from '@shared/utils/ApiResponse';
 import { EG_GOVERNORATES } from '@shared/constants/governorates';
@@ -75,18 +76,27 @@ export const deleteZone = async (zoneId: string) => {
 // SHIPPING CLASSES  (admin manages; vendors/admin read for product forms)
 // ─────────────────────────────────────────────────────────────────────────────
 
+const shippingClassCounts = {
+  _count: {
+    select: {
+      products: { where: { deletedAt: null } },
+      categories: { where: { deletedAt: null } },
+    },
+  },
+};
+
 export const listShippingClasses = async (includeInactive = false) => {
   return prisma.shippingClass.findMany({
     where: { deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
     orderBy: { createdAt: 'asc' },
-    include: { _count: { select: { products: { where: { deletedAt: null } } } } },
+    include: shippingClassCounts,
   });
 };
 
 export const createShippingClass = async (input: CreateShippingClassInput) => {
   return prisma.shippingClass.create({
     data: input as never,
-    include: { _count: { select: { products: true } } },
+    include: shippingClassCounts,
   });
 };
 
@@ -96,19 +106,62 @@ export const updateShippingClass = async (classId: string, input: UpdateShipping
   return prisma.shippingClass.update({
     where: { id: classId },
     data: input as never,
-    include: { _count: { select: { products: { where: { deletedAt: null } } } } },
+    include: shippingClassCounts,
   });
+};
+
+// ── Category assignment ────────────────────────────────────────────────────
+// Replaces the full set of categories/sub-categories using this class in one
+// call: unassigns any category currently pointing here that isn't in the new
+// list, then assigns everything in it. A sub-category with no class of its
+// own inherits its nearest ancestor's at order time (see orders.service.ts).
+export const listShippingClassCategories = async (classId: string) => {
+  return prisma.category.findMany({
+    where: { shippingClassId: classId, deletedAt: null },
+    select: { id: true, name: true, slug: true, parentId: true },
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+  });
+};
+
+export const setShippingClassCategories = async (classId: string, categoryIds: string[]) => {
+  const cls = await prisma.shippingClass.findFirst({ where: { id: classId, deletedAt: null } });
+  if (!cls) throw ApiError.notFound('Shipping class not found');
+
+  if (categoryIds.length > 0) {
+    const found = await prisma.category.count({ where: { id: { in: categoryIds }, deletedAt: null } });
+    if (found !== categoryIds.length) throw ApiError.badRequest('One or more categories not found');
+  }
+
+  await prisma.$transaction([
+    prisma.category.updateMany({
+      where: { shippingClassId: classId, id: { notIn: categoryIds } },
+      data: { shippingClassId: null },
+    }),
+    ...(categoryIds.length > 0
+      ? [prisma.category.updateMany({ where: { id: { in: categoryIds } }, data: { shippingClassId: classId } })]
+      : []),
+  ]);
+
+  // The public category tree embeds shippingClassId and is Redis-cached.
+  await redis.del(RedisKeys.cache.categories());
+
+  return listShippingClassCategories(classId);
 };
 
 export const deleteShippingClass = async (classId: string) => {
   const cls = await prisma.shippingClass.findFirst({
     where: { id: classId, deletedAt: null },
-    include: { _count: { select: { products: { where: { deletedAt: null } } } } },
+    include: shippingClassCounts,
   });
   if (!cls) throw ApiError.notFound('Shipping class not found');
   if (cls._count.products > 0) {
     throw ApiError.conflict(
       `Cannot delete: ${cls._count.products} product(s) use this shipping class. Reassign them first.`
+    );
+  }
+  if (cls._count.categories > 0) {
+    throw ApiError.conflict(
+      `Cannot delete: ${cls._count.categories} categorie(s) use this shipping class. Reassign them first.`
     );
   }
   await prisma.shippingClass.update({

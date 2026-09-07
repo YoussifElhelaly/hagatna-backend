@@ -10,6 +10,7 @@ import {
   UpdateZoneSchema,
   CreateShippingClassSchema,
   UpdateShippingClassSchema,
+  SetShippingClassCategoriesSchema,
   CreateMethodSchema,
   UpdateMethodSchema,
   CreateShipmentSchema,
@@ -39,6 +40,8 @@ router.get('/classes', authenticate, ShippingController.listShippingClasses);
 router.post('/classes', authenticate, authorize(ROLES.ADMIN), validate({ body: CreateShippingClassSchema }), ShippingController.createShippingClass);
 router.patch('/classes/:id', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema, body: UpdateShippingClassSchema }), ShippingController.updateShippingClass);
 router.delete('/classes/:id', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema }), ShippingController.deleteShippingClass);
+router.get('/classes/:id/categories', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema }), ShippingController.getShippingClassCategories);
+router.put('/classes/:id/categories', authenticate, authorize(ROLES.ADMIN), validate({ params: IdParamSchema, body: SetShippingClassCategoriesSchema }), ShippingController.setShippingClassCategories);
 
 // ─── Admin — Method Management ────────────────────────────────────────────────
 router.get('/methods', authenticate, authorize(ROLES.ADMIN), ShippingController.listMethods);

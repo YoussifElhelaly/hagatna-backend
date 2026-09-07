@@ -15,6 +15,16 @@ const categorySelect = {
   sortOrder: true,
   isActive: true,
   createdAt: true,
+  shippingClassId: true,
+};
+
+/** Throws if the given shipping class id doesn't reference an active class */
+const verifyShippingClass = async (shippingClassId?: string | null) => {
+  if (!shippingClassId) return;
+  const cls = await prisma.shippingClass.findFirst({
+    where: { id: shippingClassId, isActive: true, deletedAt: null },
+  });
+  if (!cls) throw ApiError.notFound('Shipping class not found or inactive');
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +101,7 @@ export const createCategory = async (input: CreateCategoryInput) => {
     const parent = await prisma.category.findFirst({ where: { id: input.parentId, deletedAt: null } });
     if (!parent) throw ApiError.notFound('Parent category not found');
   }
+  await verifyShippingClass(input.shippingClassId);
 
   const slug = await generateUniqueSlug(input.name.en, 'category');
 
@@ -122,6 +133,7 @@ export const updateCategory = async (categoryId: string, input: UpdateCategoryIn
     const parent = await prisma.category.findFirst({ where: { id: input.parentId, deletedAt: null } });
     if (!parent) throw ApiError.notFound('Parent category not found');
   }
+  await verifyShippingClass(input.shippingClassId);
 
   // Regenerate slug if English name changed
   let slug = existing.slug;

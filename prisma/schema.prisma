@@ -272,6 +272,12 @@ model Category {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Shipping class applied to products in this category when a product has none
+  // of its own; a sub-category with no class of its own inherits its nearest
+  // ancestor's (see orders.service.ts buildOrderPlan's category-shipping walk).
+  shippingClassId String?
+  shippingClass   ShippingClass? @relation(fields: [shippingClassId], references: [id])
+
   // Relations
   products             Product[]
   attributeDefinitions AttributeDefinition[]
@@ -281,6 +287,7 @@ model Category {
 
   @@index([deletedAt])
   @@index([name], type: Gin)
+  @@index([shippingClassId])
   @@map("categories")
 }
 
@@ -667,6 +674,7 @@ model ShippingClass {
   updatedAt     DateTime  @updatedAt
 
   products      Product[]
+  categories    Category[]
 
   @@index([isActive])
   @@map("shipping_classes")

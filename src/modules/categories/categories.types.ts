@@ -7,6 +7,7 @@ export interface CreateCategoryInput {
   parentId?: string;
   image?: string;
   sortOrder?: number;
+  shippingClassId?: string;
 }
 
 // ─── Update ───────────────────────────────────────────────────────────────────
@@ -17,4 +18,5 @@ export interface UpdateCategoryInput {
   image?: string;
   sortOrder?: number;
   isActive?: boolean;
+  shippingClassId?: string | null;
 }

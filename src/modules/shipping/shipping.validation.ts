@@ -60,6 +60,11 @@ export const UpdateShippingClassSchema = z
   })
   .refine((d) => Object.keys(d).length > 0, { message: 'At least one field required' });
 
+// Replaces the full set of categories/sub-categories assigned to a class in one call.
+export const SetShippingClassCategoriesSchema = z.object({
+  categoryIds: z.array(z.string().uuid()).max(500),
+});
+
 // ─── Shipping Method ──────────────────────────────────────────────────────────
 export const CreateMethodSchema = z.object({
   zoneId: z.string().uuid('Invalid zone ID'),

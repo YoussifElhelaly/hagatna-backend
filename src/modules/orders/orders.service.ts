@@ -159,6 +159,39 @@ type ShippingClassLike = {
   id: string; baseCost: unknown; extraUnitCost: unknown; maxCost: unknown; isActive: boolean;
 };
 
+const SHIPPING_CLASS_SELECT = {
+  id: true, baseCost: true, extraUnitCost: true, maxCost: true, isActive: true,
+} as const;
+
+/**
+ * A product with no shipping class of its own falls back to its category's,
+ * walking up to the nearest ancestor category that has one set (so admins can
+ * set a class once per category instead of on every product). Memoized per
+ * category id within a single order/quote — several items usually share one.
+ */
+const makeCategoryShippingResolver = () => {
+  const cache = new Map<string, ShippingClassLike | null>();
+  return async (categoryId: string): Promise<ShippingClassLike | null> => {
+    if (cache.has(categoryId)) return cache.get(categoryId)!;
+    let result: ShippingClassLike | null = null;
+    let currentId: string | null = categoryId;
+    const visited = new Set<string>();
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const cat: { parentId: string | null; shippingClass: ShippingClassLike | null } | null =
+        await prisma.category.findUnique({
+          where: { id: currentId },
+          select: { parentId: true, shippingClass: { select: SHIPPING_CLASS_SELECT } },
+        });
+      if (!cat) break;
+      if (cat.shippingClass?.isActive) { result = cat.shippingClass; break; }
+      currentId = cat.parentId;
+    }
+    cache.set(categoryId, result);
+    return result;
+  };
+};
+
 const calcClassShipping = (
   items: { quantity: number; product: { shippingClass?: ShippingClassLike | null } }[],
 ): number => {
@@ -258,6 +291,15 @@ export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => 
       throw ApiError.badRequest(
         `Insufficient stock for "${(item.product.name as { en: string }).en}". Available: ${availableStock}`
       );
+    }
+  }
+
+  // Products with no shipping class of their own fall back to their category's
+  // (or nearest ancestor category's) — see makeCategoryShippingResolver above.
+  const resolveCategoryShipping = makeCategoryShippingResolver();
+  for (const item of cart.items) {
+    if (!item.product.shippingClass?.isActive) {
+      item.product.shippingClass = (await resolveCategoryShipping(item.product.categoryId)) as never;
     }
   }
 

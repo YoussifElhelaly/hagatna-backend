@@ -51,6 +51,16 @@ export const deleteShippingClass = asyncHandler(async (req: Request, res: Respon
   sendSuccess({ res, message: 'Shipping class deleted', data: null });
 });
 
+export const getShippingClassCategories = asyncHandler(async (req: Request, res: Response) => {
+  const categories = await ShippingService.listShippingClassCategories(req.params.id);
+  sendSuccess({ res, message: 'Assigned categories retrieved', data: categories });
+});
+
+export const setShippingClassCategories = asyncHandler(async (req: Request, res: Response) => {
+  const categories = await ShippingService.setShippingClassCategories(req.params.id, req.body.categoryIds);
+  sendSuccess({ res, message: 'Assigned categories updated', data: categories });
+});
+
 // ─── Methods ──────────────────────────────────────────────────────────────────
 
 export const listMethods = asyncHandler(async (req: Request, res: Response) => {
