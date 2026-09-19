@@ -6,6 +6,7 @@ import { ROLES } from '@shared/constants/roles';
 import {
   UpdateProfileSchema,
   ChangePasswordSchema,
+  DeleteAccountSchema,
   CreateAddressSchema,
   UpdateAddressSchema,
   AddressIdParamSchema,
@@ -38,6 +39,13 @@ router.patch(
   '/me/password',
   validate({ body: ChangePasswordSchema }),
   UsersController.changePassword
+);
+
+// DELETE /api/v1/users/me
+router.delete(
+  '/me',
+  validate({ body: DeleteAccountSchema }),
+  UsersController.deleteAccount
 );
 
 // ─── My Addresses ─────────────────────────────────────────────────────────────

@@ -90,6 +90,40 @@ export const changePassword = async (
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// deleteAccount
+// ─────────────────────────────────────────────────────────────────────────────
+export const deleteAccount = async (userId: string): Promise<void> => {
+  // Check for active orders
+  const activeOrders = await prisma.order.findFirst({
+    where: {
+      userId,
+      status: {
+        in: ['pending', 'confirmed', 'processing', 'shipped'],
+      },
+    },
+  });
+
+  if (activeOrders) {
+    throw ApiError.badRequest('Cannot delete account with active orders');
+  }
+
+  // Soft delete / Anonymize user
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      isActive: false,
+      email: `deleted_${userId}@hagatna.com`,
+      name: 'Deleted User',
+      passwordHash: null,
+      googleId: null,
+      facebookId: null,
+      refreshToken: null,
+      phone: null,
+    },
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Addresses
 // ─────────────────────────────────────────────────────────────────────────────
 export const getAddresses = async (userId: string) => {

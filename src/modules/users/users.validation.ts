@@ -29,6 +29,12 @@ export const ChangePasswordSchema = z.object({
   path: ['newPassword'],
 });
 
+export const DeleteAccountSchema = z.object({
+  confirmText: z.literal('DELETE', {
+    errorMap: () => ({ message: 'Please type DELETE to confirm' }),
+  }),
+});
+
 // ─── Address ──────────────────────────────────────────────────────────────────
 export const CreateAddressSchema = z.object({
   label: z.string().max(50).optional(),

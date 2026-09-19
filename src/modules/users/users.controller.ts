@@ -22,6 +22,17 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
   sendSuccess({ res, message: 'Password changed successfully' });
 });
 
+// ─── DELETE /users/me ─────────────────────────────────────────────────────────
+export const deleteAccount = asyncHandler(async (req: Request, res: Response) => {
+  await UsersService.deleteAccount(req.user!.id);
+  
+  // Clear auth cookies
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
+  
+  sendSuccess({ res, message: 'Account deleted successfully' });
+});
+
 // ─── GET /users/me/addresses ──────────────────────────────────────────────────
 export const getAddresses = asyncHandler(async (req: Request, res: Response) => {
   const addresses = await UsersService.getAddresses(req.user!.id);
