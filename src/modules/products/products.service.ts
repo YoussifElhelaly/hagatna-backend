@@ -1024,6 +1024,10 @@ export const deleteVariant = async (
   });
 
   await invalidateProductCache(product.slug);
+  
+  if (product.status === ProductStatus.active) {
+    revalidateFrontendPaths(['/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
