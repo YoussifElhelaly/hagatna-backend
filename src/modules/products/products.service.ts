@@ -436,6 +436,10 @@ export const createProduct = async (userId: string, input: CreateProductInput) =
   const { variants = [], images = [], tags = [], ...baseData } = input;
   const slug = await generateUniqueSlug(input.name.en, 'product');
   const normalizedImages = normalizeImages(images);
+  const normalizedVariants = variants.map((v) => ({
+    ...v,
+    name: deriveVariantName(v),
+  }));
 
   const product = await prisma.product.create({
     data: {
@@ -443,7 +447,7 @@ export const createProduct = async (userId: string, input: CreateProductInput) =
       vendorId: vendor.id,
       slug,
       status: ProductStatus.pending_approval,   // vendors can't set status — every new product goes straight to review
-      variants: variants.length > 0 ? { create: variants } : undefined,
+      variants: normalizedVariants.length > 0 ? { create: normalizedVariants } : undefined,
       images: normalizedImages.length > 0 ? { create: normalizedImages } : undefined,
       tags: tags.length > 0 ? { create: tags.map((t) => ({ tag: t })) } : undefined,
     },
@@ -750,6 +754,10 @@ export const adminCreateProduct = async (
 
   const slug = await generateUniqueSlug((baseData.name as { en: string }).en, 'product');
   const normalizedImages = normalizeImages(images as ProductImageInput[]);
+  const normalizedVariants = (variants as ProductVariantInput[]).map((v) => ({
+    ...v,
+    name: deriveVariantName(v),
+  }));
 
   return prisma.product.create({
     data: {
@@ -757,7 +765,7 @@ export const adminCreateProduct = async (
       vendorId,
       slug,
       status,
-      variants: variants.length > 0 ? { create: variants } : undefined,
+      variants: normalizedVariants.length > 0 ? { create: normalizedVariants } : undefined,
       images: normalizedImages.length > 0 ? { create: normalizedImages } : undefined,
       tags: tags.length > 0 ? { create: tags.map((t) => ({ tag: t })) } : undefined,
     },
@@ -944,8 +952,10 @@ export const addVariant = async (
     product = await verifyOwnership(vendor.id, productId);
   }
 
+  const name = deriveVariantName(input);
+
   const variant = await prisma.productVariant.create({
-    data: { ...input, productId },
+    data: { ...input, name, productId },
     select: {
       id: true, name: true, options: true, price: true,
       comparePrice: true, sku: true, stockQuantity: true,
@@ -1060,6 +1070,17 @@ export const setProductImages = async (
     select: { id: true, url: true, altText: true, isPrimary: true, sortOrder: true },
     orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
   });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utility: ensure variant name is derived if missing or empty
+// ─────────────────────────────────────────────────────────────────────────────
+const deriveVariantName = (input: { name?: string; options?: Record<string, string> }): string => {
+  if (input.name && input.name.trim()) {
+    return input.name.trim().slice(0, 100);
+  }
+  const fromOptions = Object.values(input.options || {}).filter(Boolean).join(' / ').slice(0, 100);
+  return fromOptions || 'Default';
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

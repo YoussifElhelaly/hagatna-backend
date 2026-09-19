@@ -19,8 +19,8 @@ const positiveDecimal = z
   .multipleOf(0.01, 'Max 2 decimal places');
 
 // ─── Variant ──────────────────────────────────────────────────────────────────
-const ProductVariantSchema = z.object({
-  name: z.string().min(1).max(100),
+export const ProductVariantSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
   options: z.record(z.string(), z.string()).refine(
     (v) => Object.keys(v).length > 0,
     { message: 'Variant options cannot be empty' }

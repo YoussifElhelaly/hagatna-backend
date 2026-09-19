@@ -3,7 +3,7 @@ import { LocalizedString } from '@shared/types';
 
 // ─── Variants ─────────────────────────────────────────────────────────────────
 export interface ProductVariantInput {
-  name: string;
+  name?: string;
   options: Record<string, string>;   // e.g. { color: 'red', size: 'L' }
   price: number;
   comparePrice?: number;

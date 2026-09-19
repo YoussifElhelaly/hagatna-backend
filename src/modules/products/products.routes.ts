@@ -22,6 +22,7 @@ import {
   ProductIdParamSchema,
   ProductSlugParamSchema,
   ProductVariantParamSchema,
+  ProductVariantSchema,
   UpdateVariantSchema,
   SetProductImagesSchema,
 } from './products.validation';
@@ -225,7 +226,7 @@ router.post(
   '/:id/variants',
   authenticate,
   requireApprovedVendor(Role.admin),
-  validate({ params: ProductIdParamSchema }),
+  validate({ params: ProductIdParamSchema, body: ProductVariantSchema }),
   ProductsController.addVariant
 );
 
