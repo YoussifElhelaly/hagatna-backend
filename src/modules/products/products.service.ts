@@ -7,6 +7,10 @@ import { generateUniqueSlug } from '@shared/utils/generateSlug';
 import { buildPaginationMeta } from '@shared/utils/ApiResponse';
 import { notify } from '@modules/notifications/notifications.service';
 import { getDescendantIds } from '@shared/utils/categoryTree';
+// Storefront's i18n routing serves the default locale (ar) unprefixed
+// (localePrefix: 'as-needed' in hagatna-customer/i18n/routing.ts) — revalidate
+// '/products/<slug>' for ar, not '/ar/products/<slug>' (that path 307-redirects
+// and doesn't match what Next actually cached).
 import { revalidateFrontendPaths } from '@shared/utils/revalidateFrontend';
 import { sanitizeDescriptionHtml } from '@shared/validation/description';
 import type {
@@ -53,6 +57,8 @@ const productBaseSelect = {
 const productDetailSelect = {
   ...productBaseSelect,
   costPrice: true,
+  metaTitle: true,
+  metaDescription: true,
   vendor: {
     select: {
       id: true,
@@ -491,7 +497,7 @@ export const updateProduct = async (
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   
   if (product.status === ProductStatus.active) {
-    revalidateFrontendPaths(['/ar/products/' + slug, '/en/products/' + slug, '/sitemap.xml']).catch(() => {});
+    revalidateFrontendPaths(['/products/' + slug, '/en/products/' + slug, '/sitemap.xml']).catch(() => {});
   }
   return product;
 };
@@ -554,7 +560,7 @@ export const deleteProduct = async (
   });
 
   await invalidateProductCache(product.slug);
-  revalidateFrontendPaths(['/ar/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
+  revalidateFrontendPaths(['/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -632,7 +638,7 @@ export const approveProduct = async (productId: string) => {
   );
 
   await invalidateProductCache(product.slug);
-  revalidateFrontendPaths(['/ar/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
+  revalidateFrontendPaths(['/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
   return updated;
 };
 
@@ -663,7 +669,7 @@ export const rejectProduct = async (productId: string, approvalNote: string) => 
   );
 
   await invalidateProductCache(product.slug);
-  revalidateFrontendPaths(['/ar/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
+  revalidateFrontendPaths(['/products/' + product.slug, '/en/products/' + product.slug, '/sitemap.xml']).catch(() => {});
   return updated;
 };
 
@@ -825,7 +831,7 @@ export const adminUpdateProduct = async (
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   
   if (product.status === ProductStatus.active) {
-    revalidateFrontendPaths(['/ar/products/' + slug, '/en/products/' + slug, '/sitemap.xml']).catch(() => {});
+    revalidateFrontendPaths(['/products/' + slug, '/en/products/' + slug, '/sitemap.xml']).catch(() => {});
   }
   return product;
 };
@@ -921,15 +927,22 @@ export const toggleFeatured = async (productId: string) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// addVariant  —  vendor only
+// addVariant  —  vendor or admin
 // ─────────────────────────────────────────────────────────────────────────────
 export const addVariant = async (
   userId: string,
   productId: string,
-  input: ProductVariantInput
+  input: ProductVariantInput,
+  isAdmin: boolean = false
 ) => {
-  const vendor = await resolveVendor(userId);
-  const product = await verifyOwnership(vendor.id, productId);
+  let product;
+  if (isAdmin) {
+    product = await prisma.product.findFirst({ where: { id: productId, deletedAt: null } });
+    if (!product) throw ApiError.notFound('Product not found');
+  } else {
+    const vendor = await resolveVendor(userId);
+    product = await verifyOwnership(vendor.id, productId);
+  }
 
   const variant = await prisma.productVariant.create({
     data: { ...input, productId },
@@ -945,16 +958,23 @@ export const addVariant = async (
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// updateVariant  —  vendor only
+// updateVariant  —  vendor or admin
 // ─────────────────────────────────────────────────────────────────────────────
 export const updateVariant = async (
   userId: string,
   productId: string,
   variantId: string,
-  input: UpdateVariantInput
+  input: UpdateVariantInput,
+  isAdmin: boolean = false
 ) => {
-  const vendor = await resolveVendor(userId);
-  const product = await verifyOwnership(vendor.id, productId);
+  let product;
+  if (isAdmin) {
+    product = await prisma.product.findFirst({ where: { id: productId, deletedAt: null } });
+    if (!product) throw ApiError.notFound('Product not found');
+  } else {
+    const vendor = await resolveVendor(userId);
+    product = await verifyOwnership(vendor.id, productId);
+  }
 
   const variant = await prisma.productVariant.findFirst({
     where: { id: variantId, productId, deletedAt: null },
@@ -976,15 +996,22 @@ export const updateVariant = async (
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// deleteVariant  —  SOFT DELETE, vendor only
+// deleteVariant  —  SOFT DELETE, vendor or admin
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteVariant = async (
   userId: string,
   productId: string,
-  variantId: string
+  variantId: string,
+  isAdmin: boolean = false
 ) => {
-  const vendor = await resolveVendor(userId);
-  const product = await verifyOwnership(vendor.id, productId);
+  let product;
+  if (isAdmin) {
+    product = await prisma.product.findFirst({ where: { id: productId, deletedAt: null } });
+    if (!product) throw ApiError.notFound('Product not found');
+  } else {
+    const vendor = await resolveVendor(userId);
+    product = await verifyOwnership(vendor.id, productId);
+  }
 
   const variant = await prisma.productVariant.findFirst({
     where: { id: variantId, productId, deletedAt: null },

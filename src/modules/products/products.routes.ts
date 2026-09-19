@@ -218,13 +218,13 @@ router.delete(
   ProductsController.deleteProduct
 );
 
-// ─── Vendor — variant management ─────────────────────────────────────────────
+// ─── Vendor & Admin — variant management ─────────────────────────────────────────────
 
 // POST /api/v1/products/:id/variants
 router.post(
   '/:id/variants',
   authenticate,
-  requireApprovedVendor(),
+  requireApprovedVendor(Role.admin),
   validate({ params: ProductIdParamSchema }),
   ProductsController.addVariant
 );
@@ -233,7 +233,7 @@ router.post(
 router.patch(
   '/:id/variants/:variantId',
   authenticate,
-  requireApprovedVendor(),
+  requireApprovedVendor(Role.admin),
   validate({ params: ProductVariantParamSchema, body: UpdateVariantSchema }),
   ProductsController.updateVariant
 );
@@ -242,7 +242,7 @@ router.patch(
 router.delete(
   '/:id/variants/:variantId',
   authenticate,
-  requireApprovedVendor(),
+  requireApprovedVendor(Role.admin),
   validate({ params: ProductVariantParamSchema }),
   ProductsController.deleteVariant
 );

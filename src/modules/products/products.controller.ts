@@ -156,26 +156,30 @@ export const adminUpdateProduct = asyncHandler(async (req: Request, res: Respons
   sendSuccess({ res, message: 'Product updated successfully', data: product });
 });
 
-// ─── POST /products/:id/variants  (vendor) ───────────────────────────────────
+// ─── POST /products/:id/variants  (vendor or admin) ───────────────────────────────────
 export const addVariant = asyncHandler(async (req: Request, res: Response) => {
-  const variant = await ProductsService.addVariant(req.user!.id, req.params.id, req.body);
+  const isAdmin = req.user!.role === ROLES.ADMIN;
+  const variant = await ProductsService.addVariant(req.user!.id, req.params.id, req.body, isAdmin);
   sendCreated(res, 'Variant added successfully', variant);
 });
 
-// ─── PATCH /products/:id/variants/:variantId  (vendor) ───────────────────────
+// ─── PATCH /products/:id/variants/:variantId  (vendor or admin) ───────────────────────
 export const updateVariant = asyncHandler(async (req: Request, res: Response) => {
+  const isAdmin = req.user!.role === ROLES.ADMIN;
   const variant = await ProductsService.updateVariant(
     req.user!.id,
     req.params.id,
     req.params.variantId,
-    req.body
+    req.body,
+    isAdmin
   );
   sendSuccess({ res, message: 'Variant updated successfully', data: variant });
 });
 
-// ─── DELETE /products/:id/variants/:variantId  (vendor) ──────────────────────
+// ─── DELETE /products/:id/variants/:variantId  (vendor or admin) ──────────────────────
 export const deleteVariant = asyncHandler(async (req: Request, res: Response) => {
-  await ProductsService.deleteVariant(req.user!.id, req.params.id, req.params.variantId);
+  const isAdmin = req.user!.role === ROLES.ADMIN;
+  await ProductsService.deleteVariant(req.user!.id, req.params.id, req.params.variantId, isAdmin);
   sendSuccess({ res, message: 'Variant deleted successfully', data: null });
 });
 
