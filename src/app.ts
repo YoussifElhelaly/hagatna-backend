@@ -57,6 +57,7 @@ import statsRoutes from '@modules/stats/stats.routes';
 import brandRoutes from '@modules/brands/brands.routes';
 import searchRoutes from '@modules/search/search.routes';
 import blogRoutes from '@modules/blog/blog.routes';
+import earlyRegistrationRoutes from '@modules/early-registration/early-registration.routes';
 
 // ─── Passport Config ─────────────────────────────────────────────────────────
 import '@config/passport';
@@ -179,6 +180,7 @@ app.use(`${API_PREFIX}/stats`, statsRoutes);
 app.use(`${API_PREFIX}/brands`, brandRoutes);
 app.use(`${API_PREFIX}/search`, searchRoutes);
 app.use(`${API_PREFIX}/blog`, blogRoutes);
+app.use(`${API_PREFIX}/early-registration`, earlyRegistrationRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, _res, next) => {

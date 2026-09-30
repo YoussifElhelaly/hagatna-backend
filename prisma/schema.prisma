@@ -1260,3 +1260,13 @@ model Setting {
 
   @@map("settings")
 }
+
+model EarlyRegistration {
+  id        String   @id @default(uuid())
+  parentName String
+  email      String   @unique
+  phone      String
+  childAge   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
