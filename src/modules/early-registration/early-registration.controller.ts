@@ -25,3 +25,33 @@ export const registerEarly = asyncHandler(async (req: Request, res: Response) =>
     data: registration
   });
 });
+
+export const getRegistrations = asyncHandler(async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const service = req.query.service as string | undefined;
+
+  const where = service ? { service } : {};
+
+  const [registrations, total] = await Promise.all([
+    prisma.earlyRegistration.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.earlyRegistration.count({ where }),
+  ]);
+
+  sendSuccess({
+    res,
+    message: 'Registrations fetched successfully',
+    data: registrations,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    }
+  });
+});
