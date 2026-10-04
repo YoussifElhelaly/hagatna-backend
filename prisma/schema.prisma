@@ -1262,11 +1262,14 @@ model Setting {
 }
 
 model EarlyRegistration {
-  id        String   @id @default(uuid())
+  id         String   @id @default(uuid())
   parentName String
-  email      String   @unique
+  email      String
   phone      String
-  childAge   String
+  service    String   @default("kids-learning")
+  childAge   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@unique([email, service])
 }
