@@ -152,3 +152,6 @@ nginx/certs/
 # Database dumps / backups
 restore.sql
 *_backup_*.sql
+backups/
+*.backup*
+
