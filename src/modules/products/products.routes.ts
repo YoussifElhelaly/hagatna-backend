@@ -22,7 +22,7 @@ import {
   ProductIdParamSchema,
   ProductSlugParamSchema,
   ProductVariantParamSchema,
-  ProductVariantSchema,
+  ProductVariantSchema, SyncVariantsSchema,
   UpdateVariantSchema,
   SetProductImagesSchema,
 } from './products.validation';
@@ -228,6 +228,16 @@ router.post(
   requireApprovedVendor(Role.admin),
   validate({ params: ProductIdParamSchema, body: ProductVariantSchema }),
   ProductsController.addVariant
+);
+
+
+// PUT /api/v1/products/:id/variants
+router.put(
+  '/:id/variants',
+  authenticate,
+  authorize(ROLES.VENDOR, ROLES.ADMIN),
+  validate({ params: ProductIdParamSchema, body: SyncVariantsSchema }),
+  ProductsController.syncVariants
 );
 
 // PATCH /api/v1/products/:id/variants/:variantId

@@ -164,6 +164,14 @@ export const addVariant = asyncHandler(async (req: Request, res: Response) => {
 });
 
 // ─── PATCH /products/:id/variants/:variantId  (vendor or admin) ───────────────────────
+
+// ─── PUT /products/:id/variants (vendor or admin) ────────────────────────────
+export const syncVariants = asyncHandler(async (req: Request, res: Response) => {
+  const isAdmin = req.user!.role === "admin";
+  await ProductsService.syncVariants(req.user!.id, req.params.id, req.body.variants, isAdmin);
+  sendSuccess({ res, message: 'Variants synchronized successfully', data: null });
+});
+
 export const updateVariant = asyncHandler(async (req: Request, res: Response) => {
   const isAdmin = req.user!.role === ROLES.ADMIN;
   const variant = await ProductsService.updateVariant(

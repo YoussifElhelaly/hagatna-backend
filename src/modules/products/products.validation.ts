@@ -275,3 +275,9 @@ export const AdminListProductsQuerySchema = z.object({
   isFeatured: z.preprocess((val) => val === 'true' ? true : val === 'false' ? false : val, z.boolean().optional()),
   search: z.string().max(100).optional(),
 });
+
+export const SyncVariantsSchema = z.object({
+  variants: z.array(ProductVariantSchema.extend({
+    id: z.string().uuid().optional()
+  }))
+});

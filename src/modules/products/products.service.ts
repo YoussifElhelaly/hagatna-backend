@@ -1345,3 +1345,72 @@ export const bulkImportProducts = async (
   return results;
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// syncVariants  —  vendor or admin
+// ─────────────────────────────────────────────────────────────────────────────
+export const syncVariants = async (
+  userId: string,
+  productId: string,
+  variantsInput: (ProductVariantInput & { id?: string })[],
+  isAdmin: boolean = false
+) => {
+  let product;
+  if (isAdmin) {
+    product = await prisma.product.findFirst({ where: { id: productId, deletedAt: null } });
+    if (!product) throw ApiError.notFound('Product not found');
+  } else {
+    const vendor = await resolveVendor(userId);
+    product = await verifyOwnership(vendor.id, productId);
+  }
+
+  const inputIds = variantsInput.map(v => v.id).filter(Boolean) as string[];
+
+  // Find variants to delete
+  const variantsToDelete = await prisma.productVariant.findMany({
+    where: {
+      productId,
+      id: { notIn: inputIds },
+      deletedAt: null
+    }
+  });
+
+  await prisma.$transaction(async (tx) => {
+    // Delete missing variants
+    for (const v of variantsToDelete) {
+      await tx.productVariant.update({
+        where: { id: v.id },
+        data: {
+          deletedAt: new Date(),
+          isActive: false,
+          sku: v.sku ? `${v.sku}_del_${Date.now()}` : null
+        }
+      });
+    }
+
+    // Update or Create
+    for (const vInput of variantsInput) {
+      const name = deriveVariantName(vInput);
+      const { id, ...data } = vInput;
+      
+      if (id) {
+        const existing = await tx.productVariant.findFirst({
+          where: { id, productId, deletedAt: null }
+        });
+        if (existing) {
+          await tx.productVariant.update({
+            where: { id },
+            data: { ...data, name }
+          });
+        }
+      } else {
+        await tx.productVariant.create({
+          data: { ...data, name, productId }
+        });
+      }
+    }
+  });
+
+  await syncProductAggregates(product.id);
+  await invalidateProductCache(product.slug);
+};
