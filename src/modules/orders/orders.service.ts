@@ -264,6 +264,10 @@ export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => 
               shippingClass: {
                 select: { id: true, baseCost: true, extraUnitCost: true, maxCost: true, isActive: true },
               },
+              variants: {
+                where: { isActive: true, deletedAt: null },
+                select: { id: true },
+              },
             },
           },
           variant: true,
@@ -285,6 +289,11 @@ export const buildOrderPlan = async (userId: string, input: PlaceOrderInput) => 
     }
     if (item.product.vendor.status !== 'approved') {
       throw ApiError.badRequest(`A vendor for one of your items is no longer active`);
+    }
+    if (item.product.variants.length > 0 && !item.variantId) {
+      throw ApiError.badRequest(
+        `Please select a variant for "${(item.product.name as { en: string }).en}"`
+      );
     }
     const availableStock = item.variant ? item.variant.stockQuantity : item.product.stockQuantity;
     if (item.quantity > availableStock) {

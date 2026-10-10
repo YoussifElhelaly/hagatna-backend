@@ -92,7 +92,13 @@ export const addItem = async (userId: string, input: AddCartItemInput) => {
   // ── Validate product ──────────────────────────────────────────────────────
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    include: { vendor: { select: { status: true } } },
+    include: {
+      vendor: { select: { status: true } },
+      variants: {
+        where: { isActive: true, deletedAt: null },
+        select: { id: true },
+      },
+    },
   });
   if (!product) throw ApiError.notFound('Product not found');
   if (product.status !== ProductStatus.active) {
@@ -100,6 +106,10 @@ export const addItem = async (userId: string, input: AddCartItemInput) => {
   }
   if (product.vendor.status !== 'approved') {
     throw ApiError.badRequest('This product is not available');
+  }
+
+  if (product.variants.length > 0 && !variantId) {
+    throw ApiError.badRequest('Please select a product variant (size, color, etc.)');
   }
 
   // ── Determine price and available stock ───────────────────────────────────
@@ -191,7 +201,13 @@ export const replaceCart = async (userId: string, input: ReplaceCartInput) => {
   for (const line of lines) {
     const product = await prisma.product.findUnique({
       where: { id: line.productId },
-      include: { vendor: { select: { status: true } } },
+      include: {
+        vendor: { select: { status: true } },
+        variants: {
+          where: { isActive: true, deletedAt: null },
+          select: { id: true },
+        },
+      },
     });
     if (!product) throw ApiError.notFound('Product not found');
     if (product.status !== ProductStatus.active) {
@@ -199,6 +215,10 @@ export const replaceCart = async (userId: string, input: ReplaceCartInput) => {
     }
     if (product.vendor.status !== 'approved') {
       throw ApiError.badRequest(`Product "${(product.name as { en: string }).en}" is not available`);
+    }
+
+    if (product.variants.length > 0 && !line.variantId) {
+      throw ApiError.badRequest(`Please select a variant for product "${(product.name as { en: string }).en}"`);
     }
 
     let priceSnapshot: number;

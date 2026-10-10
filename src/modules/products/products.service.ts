@@ -52,6 +52,20 @@ const productBaseSelect = {
   approvalNote: true,
   createdAt: true,
   updatedAt: true,
+  variants: {
+    where: { isActive: true, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      options: true,
+      price: true,
+      comparePrice: true,
+      sku: true,
+      stockQuantity: true,
+      imageUrl: true,
+      isActive: true,
+    },
+  },
 };
 
 const productDetailSelect = {
