@@ -573,6 +573,8 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
           vendorStoreName: vendor.storeName,
           variantName: item.variant?.name ?? null,
           variantOptions: item.variant?.options ?? null,
+          variantImageUrl: item.variant?.imageUrl ?? null,
+          variantSku: item.variant?.sku ?? null,
         };
 
         const orderItem = await tx.orderItem.create({
@@ -693,13 +695,18 @@ export const placeOrder = async (userId: string, input: PlaceOrderInput) => {
   const customer = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
   if (customer) {
     for (const order of fullOrders) {
-      const items = (order.items as any[]).map((item: any) => ({
-        name: (item.productSnapshot as any).name?.en ?? 'Product',
-        quantity: item.quantity,
-        unitPrice: Number(item.unitPrice),
-        subtotal: Number(item.subtotal),
-        imageUrl: (item.productSnapshot as any).image ?? undefined,
-      }));
+      const items = (order.items as any[]).map((item: any) => {
+        const snap = item.productSnapshot as any;
+        const baseName = snap.name?.ar || snap.name?.en || 'Product';
+        const variantSuffix = snap.variantName ? ` - ${snap.variantName}` : '';
+        return {
+          name: baseName + variantSuffix,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice),
+          subtotal: Number(item.subtotal),
+          imageUrl: snap.variantImageUrl || snap.image || undefined,
+        };
+      });
 
       sendCustomerOrderPlacedEmail(
         customer.email,
