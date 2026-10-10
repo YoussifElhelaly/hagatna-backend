@@ -574,7 +574,12 @@ export const deleteProduct = async (
 
   await prisma.product.update({
     where: { id: productId },
-    data: { deletedAt: new Date(), slug: tombstoneSlug, isFeatured: false },
+    data: { 
+      deletedAt: new Date(), 
+      slug: tombstoneSlug, 
+      sku: product.sku ? `${product.sku}_del_${Date.now()}` : null,
+      isFeatured: false 
+    },
   });
 
   await invalidateProductCache(product.slug);
@@ -1053,7 +1058,11 @@ export const deleteVariant = async (
 
   await prisma.productVariant.update({
     where: { id: variantId },
-    data: { deletedAt: new Date(), isActive: false },
+    data: { 
+      deletedAt: new Date(), 
+      isActive: false, 
+      sku: variant.sku ? `${variant.sku}_del_${Date.now()}` : null 
+    },
   });
 
   await invalidateProductCache(product.slug);
