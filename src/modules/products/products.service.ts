@@ -429,6 +429,20 @@ export const getVendorProductById = async (userId: string, productId: string) =>
 // ─────────────────────────────────────────────────────────────────────────────
 // createProduct  —  vendor only, always starts as 'draft'
 // ─────────────────────────────────────────────────────────────────────────────
+const syncProductStock = async (productId: string) => {
+  const variants = await prisma.productVariant.findMany({
+    where: { productId, deletedAt: null, isActive: true },
+    select: { stockQuantity: true },
+  });
+  if (variants.length > 0) {
+    const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+    await prisma.product.update({
+      where: { id: productId },
+      data: { stockQuantity: totalStock },
+    });
+  }
+};
+
 /** Throws if the given shipping class id doesn't reference an active class */
 const verifyShippingClass = async (shippingClassId?: string | null) => {
   if (!shippingClassId) return;
@@ -467,7 +481,11 @@ export const createProduct = async (userId: string, input: CreateProductInput) =
     },
     select: productDetailSelect,
   });
-
+  if (normalizedVariants.length > 0) {
+    await syncProductStock(product.id);
+    const updated = await prisma.product.findUnique({ where: { id: product.id }, select: productDetailSelect });
+    return updated as any;
+  }
   return product;
 };
 
@@ -511,6 +529,7 @@ export const updateProduct = async (
     });
   });
 
+  await syncProductStock(productId);
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   
@@ -629,6 +648,9 @@ export const bulkUpdateProducts = async (
   for (const p of products) {
     pathsToRevalidate.push(`/ar/products/${p.slug}`);
     pathsToRevalidate.push(`/en/products/${p.slug}`);
+  }
+  for (const id of ids) {
+    await syncProductStock(id);
   }
   revalidateFrontendPaths(pathsToRevalidate).catch(() => {});
 
@@ -778,7 +800,7 @@ export const adminCreateProduct = async (
     name: deriveVariantName(v),
   }));
 
-  return prisma.product.create({
+  const product = await prisma.product.create({
     data: {
       ...baseData,
       vendorId,
@@ -790,6 +812,13 @@ export const adminCreateProduct = async (
     },
     select: productDetailSelect,
   });
+
+  if (normalizedVariants.length > 0) {
+    await syncProductStock(product.id);
+    const updated = await prisma.product.findUnique({ where: { id: product.id }, select: productDetailSelect });
+    return updated as any;
+  }
+  return product;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -854,6 +883,7 @@ export const adminUpdateProduct = async (
     });
   });
 
+  await syncProductStock(productId);
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   
@@ -982,6 +1012,7 @@ export const addVariant = async (
     },
   });
 
+  await syncProductStock(product.id);
   await invalidateProductCache(product.slug);
   return variant;
 };
@@ -1024,6 +1055,7 @@ export const updateVariant = async (
     },
   });
 
+  await syncProductStock(product.id);
   await invalidateProductCache(product.slug);
 
   if (product.status === ProductStatus.active) {
@@ -1065,6 +1097,7 @@ export const deleteVariant = async (
     },
   });
 
+  await syncProductStock(product.id);
   await invalidateProductCache(product.slug);
   
   if (product.status === ProductStatus.active) {
