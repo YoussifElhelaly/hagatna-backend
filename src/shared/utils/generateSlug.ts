@@ -28,12 +28,13 @@ export const generateUniqueSlug = async (
   const base = generateSlug(text);
   let slug = base;
   let counter = 1;
+  const slugField = model === 'vendorProfile' ? 'storeSlug' : 'slug';
 
   while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existing = await (prisma[model] as any).findFirst({
       where: {
-        slug,
+        [slugField]: slug,
         ...(excludeId && { id: { not: excludeId } }),
       },
     });

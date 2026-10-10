@@ -991,9 +991,13 @@ export const updateVariant = async (
   });
   if (!variant) throw ApiError.notFound('Variant not found');
 
+  const name = input.name !== undefined
+    ? input.name
+    : (input.options ? deriveVariantName({ options: input.options }) : undefined);
+
   const updated = await prisma.productVariant.update({
     where: { id: variantId },
-    data: input,
+    data: { ...input, ...(name ? { name } : {}) },
     select: {
       id: true, name: true, options: true, price: true,
       comparePrice: true, sku: true, stockQuantity: true,
@@ -1002,6 +1006,11 @@ export const updateVariant = async (
   });
 
   await invalidateProductCache(product.slug);
+
+  if (product.status === ProductStatus.active) {
+    revalidateFrontendPaths(['/products/' + product.slug, '/en/products/' + product.slug]).catch(() => {});
+  }
+
   return updated;
 };
 
