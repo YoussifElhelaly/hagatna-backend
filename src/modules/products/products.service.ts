@@ -221,14 +221,74 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
   const attrConditions: Prisma.ProductWhereInput[] =
     attrs && Object.keys(attrs).length > 0
       ? Object.entries(attrs).map(([key, value]) => ({
-          attributes: {
-            some: {
-              value,
-              definition: { key },
+          OR: [
+            {
+              attributes: {
+                some: {
+                  value,
+                  definition: { key },
+                },
+              },
             },
-          },
+            {
+              variants: {
+                some: {
+                  options: {
+                    path: [key],
+                    equals: value,
+                  },
+                  isActive: true,
+                  deletedAt: null,
+                },
+              },
+            },
+          ],
         }))
       : [];
+
+  const andConditions: Prisma.ProductWhereInput[] = [...attrConditions];
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    andConditions.push({
+      OR: [
+        {
+          price: {
+            ...(minPrice !== undefined && { gte: minPrice }),
+            ...(maxPrice !== undefined && { lte: maxPrice }),
+          },
+        },
+        {
+          variants: {
+            some: {
+              price: {
+                ...(minPrice !== undefined && { gte: minPrice }),
+                ...(maxPrice !== undefined && { lte: maxPrice }),
+              },
+              isActive: true,
+              deletedAt: null,
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  if (onSale) {
+    andConditions.push({
+      OR: [
+        { comparePrice: { gt: prisma.product.fields.price } },
+        {
+          variants: {
+            some: {
+              comparePrice: { gt: prisma.productVariant.fields.price },
+              isActive: true,
+              deletedAt: null,
+            },
+          },
+        },
+      ],
+    });
+  }
 
   const where: Prisma.ProductWhereInput = {
     status: ProductStatus.active,
@@ -239,20 +299,10 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     ...(brandId && { brandId }),
     ...(isFeatured !== undefined && { isFeatured }),
     ...(searchIds && { id: { in: searchIds } }),
-    // onSale: only products whose comparePrice is set AND greater than price
-    ...(onSale && { comparePrice: { gt: prisma.product.fields.price } }),
-    ...(minPrice !== undefined || maxPrice !== undefined
-      ? {
-          price: {
-            ...(minPrice !== undefined && { gte: minPrice }),
-            ...(maxPrice !== undefined && { lte: maxPrice }),
-          },
-        }
-      : {}),
     ...(tag && {
       tags: { some: { tag: { equals: tag, mode: 'insensitive' } } },
     }),
-    ...(attrConditions.length > 0 && { AND: attrConditions }),
+    ...(andConditions.length > 0 && { AND: andConditions }),
   };
 
   const orderBy: Prisma.ProductOrderByWithRelationInput =
@@ -429,16 +479,29 @@ export const getVendorProductById = async (userId: string, productId: string) =>
 // ─────────────────────────────────────────────────────────────────────────────
 // createProduct  —  vendor only, always starts as 'draft'
 // ─────────────────────────────────────────────────────────────────────────────
-const syncProductStock = async (productId: string) => {
+const syncProductAggregates = async (productId: string) => {
   const variants = await prisma.productVariant.findMany({
     where: { productId, deletedAt: null, isActive: true },
-    select: { stockQuantity: true },
+    select: { stockQuantity: true, price: true, comparePrice: true },
   });
   if (variants.length > 0) {
     const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+    
+    // Find min price variant to sync its price to the base product for sorting/filtering
+    let minPriceVariant = variants[0];
+    for (let i = 1; i < variants.length; i++) {
+      if (Number(variants[i].price) < Number(minPriceVariant.price)) {
+        minPriceVariant = variants[i];
+      }
+    }
+
     await prisma.product.update({
       where: { id: productId },
-      data: { stockQuantity: totalStock },
+      data: { 
+        stockQuantity: totalStock,
+        price: minPriceVariant.price,
+        comparePrice: minPriceVariant.comparePrice,
+      },
     });
   }
 };
@@ -482,7 +545,7 @@ export const createProduct = async (userId: string, input: CreateProductInput) =
     select: productDetailSelect,
   });
   if (normalizedVariants.length > 0) {
-    await syncProductStock(product.id);
+    await syncProductAggregates(product.id);
     const updated = await prisma.product.findUnique({ where: { id: product.id }, select: productDetailSelect });
     return updated as any;
   }
@@ -529,7 +592,7 @@ export const updateProduct = async (
     });
   });
 
-  await syncProductStock(productId);
+  await syncProductAggregates(productId);
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   
@@ -650,7 +713,7 @@ export const bulkUpdateProducts = async (
     pathsToRevalidate.push(`/en/products/${p.slug}`);
   }
   for (const id of ids) {
-    await syncProductStock(id);
+    await syncProductAggregates(id);
   }
   revalidateFrontendPaths(pathsToRevalidate).catch(() => {});
 
@@ -814,7 +877,7 @@ export const adminCreateProduct = async (
   });
 
   if (normalizedVariants.length > 0) {
-    await syncProductStock(product.id);
+    await syncProductAggregates(product.id);
     const updated = await prisma.product.findUnique({ where: { id: product.id }, select: productDetailSelect });
     return updated as any;
   }
@@ -883,7 +946,7 @@ export const adminUpdateProduct = async (
     });
   });
 
-  await syncProductStock(productId);
+  await syncProductAggregates(productId);
   await invalidateProductCache(existing.slug);
   if (slug !== existing.slug) await redis.del(RedisKeys.cache.product(slug));
   
@@ -1012,7 +1075,7 @@ export const addVariant = async (
     },
   });
 
-  await syncProductStock(product.id);
+  await syncProductAggregates(product.id);
   await invalidateProductCache(product.slug);
   return variant;
 };
@@ -1055,7 +1118,7 @@ export const updateVariant = async (
     },
   });
 
-  await syncProductStock(product.id);
+  await syncProductAggregates(product.id);
   await invalidateProductCache(product.slug);
 
   if (product.status === ProductStatus.active) {
@@ -1097,7 +1160,7 @@ export const deleteVariant = async (
     },
   });
 
-  await syncProductStock(product.id);
+  await syncProductAggregates(product.id);
   await invalidateProductCache(product.slug);
   
   if (product.status === ProductStatus.active) {
