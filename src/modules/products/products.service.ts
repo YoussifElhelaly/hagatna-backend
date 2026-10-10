@@ -559,7 +559,7 @@ export const deleteProduct = async (
   productId: string,
   isAdmin: boolean
 ) => {
-  let product: { id: string; slug: string };
+  let product: { id: string; slug: string; sku: string | null; };
 
   if (isAdmin) {
     const found = await prisma.product.findFirst({ where: { id: productId, deletedAt: null } });
