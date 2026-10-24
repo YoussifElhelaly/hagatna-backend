@@ -3,6 +3,7 @@ import { asyncHandler } from '@shared/utils/asyncHandler';
 import { sendSuccess, sendCreated } from '@shared/utils/ApiResponse';
 import { ROLES } from '@shared/constants/roles';
 import * as ProductsService from './products.service';
+import * as ProductImportService from './productImport.service';
 import { logActivity } from '@modules/activity-logs/activity-logs.service';
 
 // ─── GET /products  (public) ──────────────────────────────────────────────────
@@ -225,7 +226,7 @@ export const setProductImages = asyncHandler(async (req: Request, res: Response)
 
 // ─── GET /products/admin/import/template ──────────────────────────────────────
 export const downloadImportTemplate = asyncHandler(async (req: Request, res: Response) => {
-  const buffer = ProductsService.generateImportTemplate();
+  const buffer = ProductImportService.generateImportTemplate();
   res.setHeader('Content-Disposition', 'attachment; filename="products_import_template.xlsx"');
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.send(buffer);
@@ -237,18 +238,47 @@ export const importProducts = asyncHandler(async (req: Request, res: Response) =
     res.status(400).json({ status: 'fail', message: 'No file uploaded' });
     return;
   }
-  const { vendorId, categoryId, brandId } = req.body;
-  if (!vendorId || !categoryId) {
-    res.status(400).json({ status: 'fail', message: 'vendorId and categoryId are required' });
+  const { vendorId, defaultCategoryId, downloadImages } = req.body;
+  if (!vendorId) {
+    res.status(400).json({ status: 'fail', message: 'vendorId is required' });
     return;
   }
-  const result = await ProductsService.bulkImportProducts(
-    req.file.buffer,
+  const job = await ProductImportService.createImportJob({
+    fileBuffer: req.file.buffer,
+    fileName: req.file.originalname,
     vendorId,
-    categoryId,
-    brandId
-  );
-  sendSuccess({ res, message: 'Products import completed', data: result });
+    defaultCategoryId: defaultCategoryId || null,
+    downloadImages: downloadImages === true || downloadImages === 'true',
+    createdById: req.user!.id,
+  });
+
+  logActivity({
+    userId: req.user!.id,
+    role: 'admin',
+    category: 'product',
+    action: 'bulk_import_products',
+    entityType: 'product_import_job',
+    entityId: job.id,
+    entityLabel: req.file.originalname,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+  });
+
+  sendSuccess({ res, message: 'Product import job created', data: job });
+});
+
+// ─── GET /products/admin/import/jobs ──────────────────────────────────────────
+export const listImportJobs = asyncHandler(async (req: Request, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { items, meta } = await ProductImportService.listImportJobs({ page, limit });
+  sendSuccess({ res, message: 'Import jobs retrieved', data: items, meta });
+});
+
+// ─── GET /products/admin/import/jobs/:jobId ───────────────────────────────────
+export const getImportJob = asyncHandler(async (req: Request, res: Response) => {
+  const job = await ProductImportService.getImportJob(req.params.jobId);
+  sendSuccess({ res, message: 'Import job retrieved', data: job });
 });
 
 // ─── GET /products/sitemap  (public) ──────────────────────────────────────────

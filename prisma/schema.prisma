@@ -394,6 +394,27 @@ model ProductTag {
   @@map("product_tags")
 }
 
+model ProductImportJob {
+  id                String   @id @default(uuid())
+  fileName          String   @db.VarChar(255)
+  status            String   @default("pending") // pending | validating | processing | completed | failed
+  totalRows         Int      @default(0)
+  processedRows     Int      @default(0)
+  successCount      Int      @default(0)
+  skippedCount      Int      @default(0)
+  errorCount        Int      @default(0)
+  errors            Json?    // [{ row, sku, type: error|skipped|warning, message }]
+  vendorId          String   @db.VarChar(36)
+  defaultCategoryId String?  @db.VarChar(36)
+  createdById       String   @db.VarChar(36)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([createdById])
+  @@map("product_import_jobs")
+}
+
 // ═══════════════════════════════════════════════════════
 //  PRODUCT ATTRIBUTES (dynamic specs / filters)
 // ═══════════════════════════════════════════════════════

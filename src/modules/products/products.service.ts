@@ -1,4 +1,3 @@
-import * as xlsx from 'xlsx';
 import { ProductStatus, Prisma } from '@prisma/client';
 import { prisma } from '@database/prisma/client';
 import { redis, RedisKeys, TTL } from '@database/redis/client';
@@ -586,7 +585,7 @@ export const getVendorProductById = async (userId: string, productId: string) =>
 // ─────────────────────────────────────────────────────────────────────────────
 // createProduct  —  vendor only, always starts as 'draft'
 // ─────────────────────────────────────────────────────────────────────────────
-const syncProductAggregates = async (productId: string) => {
+export const syncProductAggregates = async (productId: string) => {
   const variants = await prisma.productVariant.findMany({
     where: { productId, deletedAt: null, isActive: true },
     select: { stockQuantity: true, price: true, comparePrice: true },
@@ -1326,7 +1325,7 @@ export const setProductImages = async (
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility: ensure variant name is derived if missing or empty
 // ─────────────────────────────────────────────────────────────────────────────
-const deriveVariantName = (input: { name?: string; options?: Record<string, string> }): string => {
+export const deriveVariantName = (input: { name?: string; options?: Record<string, string> }): string => {
   if (input.name && input.name.trim()) {
     return input.name.trim().slice(0, 100);
   }
@@ -1337,7 +1336,7 @@ const deriveVariantName = (input: { name?: string; options?: Record<string, stri
 // ─────────────────────────────────────────────────────────────────────────────
 // Utility: ensure exactly one primary image
 // ─────────────────────────────────────────────────────────────────────────────
-const normalizeImages = (images: ProductImageInput[]): ProductImageInput[] => {
+export const normalizeImages = (images: ProductImageInput[]): ProductImageInput[] => {
   if (images.length === 0) return images;
 
   const hasPrimary = images.some((img) => img.isPrimary);
@@ -1351,123 +1350,6 @@ const normalizeImages = (images: ProductImageInput[]): ProductImageInput[] => {
     return { ...img, isPrimary: false };
   });
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// generateImportTemplate — admin bulk import
-// ─────────────────────────────────────────────────────────────────────────────
-export const generateImportTemplate = () => {
-  const ws = xlsx.utils.json_to_sheet([{
-    'Name (EN)*': '',
-    'Name (AR)*': '',
-    'Description (EN)': '',
-    'Description (AR)': '',
-    'Price*': '',
-    'Compare Price': '',
-    'Stock Quantity*': '',
-    'SKU': '',
-    'Status': 'active',
-  }]);
-  const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(wb, ws, 'Products');
-  return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// bulkImportProducts — parses XLSX/CSV and creates products
-// ─────────────────────────────────────────────────────────────────────────────
-export const bulkImportProducts = async (
-  fileBuffer: Buffer,
-  vendorId: string,
-  categoryId: string,
-  brandId?: string
-) => {
-  const wb = xlsx.read(fileBuffer, { type: 'buffer' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json<Record<string, any>>(ws);
-
-  const results = {
-    success: 0,
-    errors: [] as { row: number; error: string }[],
-  };
-
-  // Verify vendor
-  const vendor = await prisma.vendorProfile.findUnique({ where: { id: vendorId } });
-  if (!vendor) {
-    results.errors.push({ row: 0, error: 'Invalid Vendor ID' });
-    return results;
-  }
-
-  // Verify category
-  const category = await prisma.category.findUnique({ where: { id: categoryId } });
-  if (!category) {
-    results.errors.push({ row: 0, error: 'Invalid Category ID' });
-    return results;
-  }
-
-  // Verify brand if provided
-  if (brandId) {
-    const brand = await prisma.brand.findUnique({ where: { id: brandId } });
-    if (!brand) {
-      results.errors.push({ row: 0, error: 'Invalid Brand ID' });
-      return results;
-    }
-  }
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const rowNum = i + 2; // +1 for 0-index, +1 for header
-
-    try {
-      const nameEn = row['Name (EN)*'];
-      const nameAr = row['Name (AR)*'];
-      const price = parseFloat(row['Price*']);
-      const stockQuantity = parseInt(row['Stock Quantity*'], 10);
-
-      if (!nameEn || !nameAr || isNaN(price) || isNaN(stockQuantity)) {
-        results.errors.push({ row: rowNum, error: 'Missing required fields' });
-        continue;
-      }
-
-      const slug = await generateUniqueSlug(nameEn, 'product');
-      
-      const comparePrice = row['Compare Price'] ? parseFloat(row['Compare Price']) : undefined;
-      let status = (row['Status'] || 'active').toLowerCase();
-      if (!['active', 'draft', 'pending_approval', 'rejected', 'archived'].includes(status)) {
-        status = 'active';
-      }
-
-      await prisma.product.create({
-        data: {
-          vendorId,
-          categoryId,
-          brandId: brandId || undefined,
-          name: { en: nameEn, ar: nameAr },
-          description: {
-            en: sanitizeDescriptionHtml(row['Description (EN)'] || ''),
-            ar: sanitizeDescriptionHtml(row['Description (AR)'] || ''),
-          },
-          price,
-          comparePrice: isNaN(comparePrice!) ? undefined : comparePrice,
-          stockQuantity,
-          sku: row['SKU'] || undefined,
-          slug,
-          status: status as ProductStatus,
-        }
-      });
-      results.success++;
-    } catch (err: any) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        const field = (err.meta?.target as string[])?.join(', ') ?? 'field';
-        results.errors.push({ row: rowNum, error: `${field} already exists` });
-        continue;
-      }
-      results.errors.push({ row: rowNum, error: err.message || 'Unknown error' });
-    }
-  }
-
-  return results;
-};
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // syncVariants  —  vendor or admin

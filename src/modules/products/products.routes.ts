@@ -25,6 +25,8 @@ import {
   ProductVariantSchema, SyncVariantsSchema,
   UpdateVariantSchema,
   SetProductImagesSchema,
+  ImportJobsListQuerySchema,
+  ImportJobParamSchema,
 } from './products.validation';
 import * as ProductsController from './products.controller';
 
@@ -83,27 +85,41 @@ router.post(
   '/admin/import',
   authenticate,
   authorize(ROLES.ADMIN),
-  multer({ storage: multer.memoryStorage() }).single('file'),
+  multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const ok =
+        /\.(csv|xlsx|xls)$/i.test(file.originalname) ||
+        [
+          'text/csv',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel',
+        ].includes(file.mimetype);
+      if (ok) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only CSV/XLSX/XLS files are allowed'));
+      }
+    },
+  }).single('file'),
   ProductsController.importProducts
 );
 
-
-// GET  /api/v1/products/admin/:id  (admin fetches any product, full detail)
 router.get(
-  '/admin/:id',
+  '/admin/import/jobs',
   authenticate,
   authorize(ROLES.ADMIN),
-  validate({ params: ProductIdParamSchema }),
-  ProductsController.adminGetProduct
+  validate({ query: ImportJobsListQuerySchema }),
+  ProductsController.listImportJobs
 );
 
-// PATCH /api/v1/products/admin/:id  (admin updates any product, any status)
-router.patch(
-  '/admin/:id',
+router.get(
+  '/admin/import/jobs/:jobId',
   authenticate,
   authorize(ROLES.ADMIN),
-  validate({ params: ProductIdParamSchema, body: AdminUpdateProductSchema }),
-  ProductsController.adminUpdateProduct
+  validate({ params: ImportJobParamSchema }),
+  ProductsController.getImportJob
 );
 
 // PATCH /api/v1/products/admin/bulk  (admin bulk update)
@@ -124,6 +140,24 @@ router.get(
   authorize(ROLES.ADMIN),
   validate({ query: AdminProductsQuerySchema }),
   ProductsController.listPendingApproval
+);
+
+// GET  /api/v1/products/admin/:id  (admin fetches any product, full detail)
+router.get(
+  '/admin/:id',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate({ params: ProductIdParamSchema }),
+  ProductsController.adminGetProduct
+);
+
+// PATCH /api/v1/products/admin/:id  (admin updates any product, any status)
+router.patch(
+  '/admin/:id',
+  authenticate,
+  authorize(ROLES.ADMIN),
+  validate({ params: ProductIdParamSchema, body: AdminUpdateProductSchema }),
+  ProductsController.adminUpdateProduct
 );
 
 // PATCH /api/v1/products/:id/approve  (admin)
