@@ -86,11 +86,64 @@ const shippingClassCounts = {
 };
 
 export const listShippingClasses = async (includeInactive = false) => {
-  return prisma.shippingClass.findMany({
+  const classes = await prisma.shippingClass.findMany({
     where: { deletedAt: null, ...(includeInactive ? {} : { isActive: true }) },
     orderBy: { createdAt: 'asc' },
     include: shippingClassCounts,
   });
+
+  try {
+    const counts: Array<{ id: string; total_products: number; direct_products: number; inherited_products: number }> =
+      await prisma.$queryRaw`
+        WITH RECURSIVE cat_tree AS (
+          SELECT id, "parentId", "shippingClassId" as effective_class_id
+          FROM categories
+          WHERE "parentId" IS NULL AND "deletedAt" IS NULL
+          UNION ALL
+          SELECT c.id, c."parentId", COALESCE(c."shippingClassId", ct.effective_class_id) as effective_class_id
+          FROM categories c
+          JOIN cat_tree ct ON c."parentId" = ct.id
+          WHERE c."deletedAt" IS NULL
+        )
+        SELECT 
+          sc.id,
+          COUNT(DISTINCT p.id)::int as total_products,
+          COUNT(DISTINCT CASE WHEN p."shippingClassId" = sc.id THEN p.id END)::int as direct_products,
+          COUNT(DISTINCT CASE WHEN p."shippingClassId" IS NULL AND ct.effective_class_id = sc.id THEN p.id END)::int as inherited_products
+        FROM shipping_classes sc
+        LEFT JOIN products p ON p."deletedAt" IS NULL AND (
+          p."shippingClassId" = sc.id 
+          OR (p."shippingClassId" IS NULL AND p."categoryId" IN (
+            SELECT id FROM cat_tree WHERE effective_class_id = sc.id
+          ))
+        )
+        LEFT JOIN cat_tree ct ON p."categoryId" = ct.id
+        WHERE sc."deletedAt" IS NULL
+        GROUP BY sc.id;
+      `;
+
+    const countsMap = new Map(
+      counts.map((c) => [
+        c.id,
+        {
+          total: Number(c.total_products),
+          direct: Number(c.direct_products),
+          inherited: Number(c.inherited_products),
+        },
+      ])
+    );
+
+    return classes.map((cls) => ({
+      ...cls,
+      _count: {
+        ...cls._count,
+        effectiveProducts: countsMap.get(cls.id)?.total ?? cls._count.products,
+        inheritedProducts: countsMap.get(cls.id)?.inherited ?? 0,
+      },
+    }));
+  } catch {
+    return classes;
+  }
 };
 
 export const createShippingClass = async (input: CreateShippingClassInput) => {

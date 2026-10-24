@@ -23,7 +23,7 @@ export const CreateCategorySchema = z.object({
   parentId: z.string().uuid('Invalid parent category ID').optional(),
   image: z.string().min(1).optional(),
   sortOrder: z.number().int().min(0).optional().default(0),
-  shippingClassId: z.string().uuid('Invalid shipping class ID').optional(),
+  shippingClassId: z.string().uuid('Invalid shipping class ID').nullable().optional(),
 });
 
 // ─── Update ───────────────────────────────────────────────────────────────────

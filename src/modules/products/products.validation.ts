@@ -248,6 +248,13 @@ export const ProductsListQuerySchema = z.object({
   tag:        z.string().max(50).optional(),
   isFeatured: z.coerce.boolean().optional(),
   onSale:     z.coerce.boolean().optional(),
+  inStock: z
+    .preprocess((val) => {
+      if (val === true || val === 'true' || val === '1') return true;
+      if (val === false || val === 'false' || val === '0') return false;
+      return undefined;
+    }, z.boolean().optional()),
+  minRating: z.coerce.number().min(1).max(5).optional(),
   sort: z
     .enum(['price_asc', 'price_desc', 'newest', 'popular'])
     .optional()

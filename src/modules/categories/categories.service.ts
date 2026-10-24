@@ -16,6 +16,16 @@ const categorySelect = {
   isActive: true,
   createdAt: true,
   shippingClassId: true,
+  shippingClass: {
+    select: {
+      id: true,
+      name: true,
+      baseCost: true,
+      extraUnitCost: true,
+      maxCost: true,
+      isActive: true,
+    },
+  },
 };
 
 /** Throws if the given shipping class id doesn't reference an active class */

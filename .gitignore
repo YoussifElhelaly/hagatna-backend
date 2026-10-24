@@ -155,3 +155,5 @@ restore.sql
 backups/
 *.backup*
 
+
+*.bak*

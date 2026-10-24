@@ -92,6 +92,8 @@ export interface ProductsListQuery {
   tag?: string;
   isFeatured?: boolean;
   onSale?: boolean;
+  inStock?: boolean;
+  minRating?: number;
   sort?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
   // Dynamic attribute filters e.g. { ram: "8GB", color: "Black" }
   attrs?: Record<string, string>;

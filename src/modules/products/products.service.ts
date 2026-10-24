@@ -183,7 +183,7 @@ const invalidateProductCache = async (slug: string) => {
 export const listProducts = async (query: ProductsListQuery, userId?: string) => {
   const {
     page = 1, limit = 20, categoryId, vendorId, vendorSlug, brand,
-    minPrice, maxPrice, search, tag, isFeatured, onSale, sort = 'newest',
+    minPrice, maxPrice, search, tag, isFeatured, onSale, inStock, minRating, sort = 'newest',
     attrs,
   } = query;
   const skip = (page - 1) * limit;
@@ -290,6 +290,36 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     });
   }
 
+  if (inStock === true) {
+    andConditions.push({
+      OR: [
+        { stockQuantity: { gt: 0 } },
+        { variants: { some: { stockQuantity: { gt: 0 }, isActive: true, deletedAt: null } } },
+      ],
+    });
+  } else if (inStock === false) {
+    andConditions.push({
+      stockQuantity: { lte: 0 },
+      variants: {
+        none: { stockQuantity: { gt: 0 }, isActive: true, deletedAt: null },
+      },
+    });
+  }
+
+  if (minRating !== undefined && minRating > 0) {
+    const rows = await prisma.$queryRaw<{ productId: string }[]>`
+      SELECT "productId"
+      FROM "reviews"
+      WHERE "status" = 'approved' AND "deletedAt" IS NULL
+      GROUP BY "productId"
+      HAVING AVG("rating") >= ${minRating}
+    `;
+    const ratingIds = rows.map((r) => r.productId);
+    andConditions.push({
+      id: { in: ratingIds.length > 0 ? ratingIds : ['__no_match__'] },
+    });
+  }
+
   const where: Prisma.ProductWhereInput = {
     status: ProductStatus.active,
     deletedAt: null,
@@ -333,8 +363,43 @@ export const listProducts = async (query: ProductsListQuery, userId?: string) =>
     prisma.product.count({ where }),
   ]);
 
-  const productsWithWishlist = await attachWishlistStatus(products, userId);
-  return { products: productsWithWishlist, meta: buildPaginationMeta(total, page, limit) };
+  const productIds = products.map((p) => p.id);
+  const [productsWithWishlist, ratingAggs] = await Promise.all([
+    attachWishlistStatus(products, userId),
+    productIds.length > 0
+      ? prisma.review.groupBy({
+          by: ['productId'],
+          where: {
+            productId: { in: productIds },
+            status: 'approved',
+            deletedAt: null,
+          },
+          _avg: { rating: true },
+          _count: { rating: true },
+        })
+      : [],
+  ]);
+
+  const ratingMap = new Map<string, { rating: number; reviewCount: number }>();
+  for (const agg of ratingAggs) {
+    if (agg.productId) {
+      ratingMap.set(agg.productId, {
+        rating: agg._avg.rating ? Number(agg._avg.rating.toFixed(1)) : 0,
+        reviewCount: agg._count.rating,
+      });
+    }
+  }
+
+  const enrichedProducts = productsWithWishlist.map((p) => {
+    const stats = ratingMap.get(p.id);
+    return {
+      ...p,
+      rating: stats?.rating ?? null,
+      reviewCount: stats?.reviewCount ?? (p as any)._count?.reviews ?? 0,
+    };
+  });
+
+  return { products: enrichedProducts, meta: buildPaginationMeta(total, page, limit) };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -363,8 +428,42 @@ export const getFeaturedProducts = async (userId?: string) => {
             category: { select: { id: true, name: true, slug: true } },
           },
         });
-        await redis.setex(cacheKey, TTL.FEATURED, JSON.stringify(rows));
-        return rows;
+
+        const rowIds = rows.map((r) => r.id);
+        const ratingAggs = rowIds.length > 0
+          ? await prisma.review.groupBy({
+              by: ['productId'],
+              where: {
+                productId: { in: rowIds },
+                status: 'approved',
+                deletedAt: null,
+              },
+              _avg: { rating: true },
+              _count: { rating: true },
+            })
+          : [];
+
+        const ratingMap = new Map<string, { rating: number; reviewCount: number }>();
+        for (const agg of ratingAggs) {
+          if (agg.productId) {
+            ratingMap.set(agg.productId, {
+              rating: agg._avg.rating ? Number(agg._avg.rating.toFixed(1)) : 0,
+              reviewCount: agg._count.rating,
+            });
+          }
+        }
+
+        const enrichedRows = rows.map((r) => {
+          const stats = ratingMap.get(r.id);
+          return {
+            ...r,
+            rating: stats?.rating ?? null,
+            reviewCount: stats?.reviewCount ?? 0,
+          };
+        });
+
+        await redis.setex(cacheKey, TTL.FEATURED, JSON.stringify(enrichedRows));
+        return enrichedRows;
       })();
 
   return attachWishlistStatus(products, userId);
@@ -393,6 +492,14 @@ export const getProductBySlug = async (slug: string, userId?: string) => {
 
     if (!row) throw ApiError.notFound('Product not found');
     if (row.status !== ProductStatus.active) throw ApiError.notFound('Product not found');
+
+    const reviewStats = await prisma.review.aggregate({
+      where: { productId: row.id, status: 'approved', deletedAt: null },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+    (row as any).rating = reviewStats._avg.rating ? Number(reviewStats._avg.rating.toFixed(1)) : null;
+    (row as any).reviewCount = reviewStats._count.rating ?? 0;
 
     // Cache product WITHOUT isWishlisted
     await redis.setex(cacheKey, TTL.PRODUCT, JSON.stringify(row));
@@ -960,11 +1067,27 @@ export const adminUpdateProduct = async (
 // getSitemapEntries  —  SEO sitemap
 // ─────────────────────────────────────────────────────────────────────────────
 export const getSitemapEntries = async () => {
-  return prisma.product.findMany({
+  const rows = await prisma.product.findMany({
     where: { status: 'active', deletedAt: null },
-    select: { slug: true, updatedAt: true },
+    select: {
+      slug: true,
+      updatedAt: true,
+      name: true,
+      images: {
+        select: { url: true, altText: true, isPrimary: true },
+        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+        take: 1,
+      },
+    },
     orderBy: { updatedAt: 'desc' },
   });
+
+  return rows.map((p) => ({
+    slug: p.slug,
+    updatedAt: p.updatedAt,
+    name: p.name,
+    imageUrl: p.images[0]?.url || null,
+  }));
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
